@@ -44,6 +44,24 @@ jobs:
     needs: build
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_DB: test_task_idf
+          POSTGRES_USER: test_task_idf
+          POSTGRES_PASSWORD: test_task_idf
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U test_task_idf -d test_task_idf"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      DB_URL: jdbc:postgresql://localhost:5432/test_task_idf
+      DB_USERNAME: test_task_idf
+      DB_PASSWORD: test_task_idf
     steps:
       - name: Check out source
         uses: actions/checkout@v5
