@@ -40,13 +40,15 @@ jobs:
           retention-days: 7
 
   test:
-    name: Tests
+    name: Tests and code quality
     needs: build
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
       - name: Check out source
         uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
 
       - name: Set up Java 21
         uses: actions/setup-java@v5
@@ -55,16 +57,53 @@ jobs:
           java-version: '21'
           cache: maven
 
-      - name: Run tests
-        run: bash ./mvnw --batch-mode --no-transfer-progress verify
+      - name: Run tests, architecture checks, Checkstyle and SpotBugs
+        run: bash ./mvnw --batch-mode --no-transfer-progress clean verify
 
-      - name: Upload test reports
+      - name: SonarQube analysis and Quality Gate
+        if: >-
+          vars.SONAR_HOST_URL != '' &&
+          (github.ref == format('refs/heads/{0}', github.event.repository.default_branch) ||
+           vars.SONAR_BRANCH_ANALYSIS == 'true') &&
+          (github.event_name != 'pull_request' ||
+           github.event.pull_request.head.repo.full_name == github.repository)
+        env:
+          SONAR_HOST_URL: ${{ vars.SONAR_HOST_URL }}
+          SONAR_PROJECT_KEY: ${{ vars.SONAR_PROJECT_KEY }}
+          SONAR_ORGANIZATION: ${{ vars.SONAR_ORGANIZATION }}
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+        run: |
+          : "${SONAR_TOKEN:?Set the SONAR_TOKEN repository secret}"
+          : "${SONAR_PROJECT_KEY:?Set the SONAR_PROJECT_KEY repository variable}"
+          sonar_options=()
+          if [[ "$SONAR_HOST_URL" == https://sonarcloud.io* ]]; then
+            : "${SONAR_ORGANIZATION:?Set the SONAR_ORGANIZATION repository variable}"
+          fi
+          if [[ -n "$SONAR_ORGANIZATION" ]]; then
+            sonar_options+=("-Dsonar.organization=${SONAR_ORGANIZATION}")
+          fi
+          bash ./mvnw --batch-mode --no-transfer-progress sonar:sonar \
+            "-Dsonar.projectKey=${SONAR_PROJECT_KEY}" \
+            "${sonar_options[@]}" \
+            -Dsonar.qualitygate.wait=true \
+            -Dsonar.qualitygate.timeout=300
+
+      - name: Explain missing SonarQube configuration
+        if: vars.SONAR_HOST_URL == ''
+        run: |
+          echo "::notice::SonarQube analysis is disabled until SONAR_HOST_URL and SONAR_PROJECT_KEY variables and SONAR_TOKEN secret are configured."
+          echo "SonarQube was not run: configure SONAR_HOST_URL, SONAR_PROJECT_KEY and SONAR_TOKEN." >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload test and quality reports
         if: ${{ always() }}
         uses: actions/upload-artifact@v4
         with:
-          name: test-reports
+          name: test-and-quality-reports
           path: |
             target/surefire-reports/
             target/failsafe-reports/
+            target/checkstyle-result.xml
+            target/spotbugsXml.xml
+            target/site/jacoco/
           if-no-files-found: warn
           retention-days: 7
