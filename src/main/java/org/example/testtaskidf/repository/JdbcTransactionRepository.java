@@ -5,6 +5,7 @@ import org.example.testtaskidf.util.ExpenseCategoryUtils;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Repository;
 
+/** Inserts transactions into PostgreSQL using bound JDBC parameters. */
 @Repository
 public class JdbcTransactionRepository implements TransactionRepository {
     private final JdbcTemplate jdbcTemplate;
@@ -13,6 +14,7 @@ public class JdbcTransactionRepository implements TransactionRepository {
         this.jdbcTemplate = jdbcTemplate;
     }
 
+    /** {@inheritDoc} */
     @Override
     public void save(Transaction transaction) {
         jdbcTemplate.update("""
