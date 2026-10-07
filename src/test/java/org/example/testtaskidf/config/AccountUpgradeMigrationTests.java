@@ -1,0 +1,52 @@
+package org.example.testtaskidf.config;
+
+import java.sql.Connection;
+import javax.sql.DataSource;
+
+import org.example.testtaskidf.PostgresTestConfiguration;
+import org.flywaydb.core.Flyway;
+import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.context.annotation.Import;
+
+import static org.assertj.core.api.Assertions.assertThat;
+
+@SpringBootTest
+@Import(PostgresTestConfiguration.class)
+class AccountUpgradeMigrationTests {
+    @Autowired
+    private DataSource dataSource;
+
+    @Test
+    void backfillsExistingSourceAndLimitAccountsWithoutRegisteringCounterparty() throws Exception {
+        var schema = "account_upgrade_test";
+        Flyway.configure().dataSource(dataSource).schemas(schema).defaultSchema(schema).target("3").load().migrate();
+        try (Connection connection = dataSource.getConnection(); var statement = connection.createStatement()) {
+            connection.setAutoCommit(false);
+            statement.execute("SET LOCAL search_path TO " + schema);
+            statement.execute("""
+                    INSERT INTO transactions (account_from, account_to, currency_shortname, sum,
+                        expense_category, datetime, received_at)
+                    VALUES ('0000000001', '9999999999', 'USD', 10, 'product',
+                        '2022-01-01T00:00:00Z', '2022-01-01T00:00:00Z')
+                    """);
+            statement.execute("""
+                    INSERT INTO expense_limits (id, account, expense_category, amount, established_at)
+                    VALUES (gen_random_uuid(), '0000000002', 'service', 500, '2022-01-02T00:00:00Z')
+                    """);
+            connection.commit();
+        }
+        Flyway.configure().dataSource(dataSource).schemas(schema).defaultSchema(schema).load().migrate();
+        try (Connection connection = dataSource.getConnection(); var statement = connection.createStatement()) {
+            try (var accounts = statement.executeQuery(
+                    "SELECT account_number FROM " + schema + ".accounts ORDER BY account_number")) {
+                assertThat(accounts.next()).isTrue();
+                assertThat(accounts.getString(1)).isEqualTo("0000000001");
+                assertThat(accounts.next()).isTrue();
+                assertThat(accounts.getString(1)).isEqualTo("0000000002");
+                assertThat(accounts.next()).isFalse();
+            }
+        }
+    }
+}

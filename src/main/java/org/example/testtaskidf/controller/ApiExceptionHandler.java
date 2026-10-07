@@ -3,6 +3,7 @@ package org.example.testtaskidf.controller;
 import java.util.LinkedHashMap;
 
 import org.example.testtaskidf.util.FieldNameUtils;
+import org.example.testtaskidf.exception.LimitConflictException;
 import org.springframework.dao.DataAccessException;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
@@ -19,6 +20,13 @@ import org.springframework.web.servlet.mvc.method.annotation.ResponseEntityExcep
 /** Returns ProblemDetail errors and exposes validation fields using API snake_case names. */
 @RestControllerAdvice
 public class ApiExceptionHandler extends ResponseEntityExceptionHandler {
+    @ExceptionHandler(LimitConflictException.class)
+    public ProblemDetail limitConflict(LimitConflictException exception) {
+        var problem = ProblemDetail.forStatusAndDetail(HttpStatus.CONFLICT, exception.getMessage());
+        problem.setProperty("code", exception.getCode());
+        return problem;
+    }
+
     @Override
     protected ResponseEntity<Object> handleMethodArgumentNotValid(MethodArgumentNotValidException exception,
             HttpHeaders headers, HttpStatusCode status, WebRequest request) {

@@ -19,11 +19,14 @@ public class TransactionService {
     private final TransactionRepository repository;
     private final TransactionMapper mapper;
     private final Clock clock;
+    private final AccountRegistrationService accounts;
 
-    public TransactionService(TransactionRepository repository, TransactionMapper mapper, Clock clock) {
+    public TransactionService(TransactionRepository repository, TransactionMapper mapper, Clock clock,
+            AccountRegistrationService accounts) {
         this.repository = repository;
         this.mapper = mapper;
         this.clock = clock;
+        this.accounts = accounts;
     }
 
     /**
@@ -39,6 +42,7 @@ public class TransactionService {
     @Transactional
     public TransactionResponse receive(TransactionRequest request) {
         var transaction = mapper.toEntity(request, UUID.randomUUID(), OffsetDateTime.now(clock));
+        accounts.register(transaction.accountFrom());
         repository.save(transaction);
         return mapper.toResponse(transaction);
     }
