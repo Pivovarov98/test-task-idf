@@ -8,6 +8,7 @@ import java.time.ZoneOffset;
 import java.util.stream.Stream;
 
 import org.junit.jupiter.api.Test;
+import org.example.testtaskidf.PostgresTestConfiguration;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.junit.jupiter.params.provider.ValueSource;
@@ -32,7 +33,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 @SpringBootTest
 @AutoConfigureMockMvc
-@Import(TransactionApiTests.FixedTimeConfiguration.class)
+@Import({PostgresTestConfiguration.class, TransactionApiTests.FixedTimeConfiguration.class})
 @Transactional
 class TransactionApiTests {
     private static final String URL = "/api/v1/bank/transactions";
