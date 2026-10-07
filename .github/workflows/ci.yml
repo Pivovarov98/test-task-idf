@@ -40,7 +40,7 @@ jobs:
           retention-days: 7
 
   test:
-    name: Tests and code quality
+    name: Test stage
     needs: build
     runs-on: ubuntu-latest
     timeout-minutes: 15
@@ -57,7 +57,10 @@ jobs:
           java-version: '21'
           cache: maven
 
-      - name: Run tests, architecture checks, Checkstyle and SpotBugs
+      - name: Check Docker for Testcontainers
+        run: docker info
+
+      - name: Run unit and integration tests, architecture checks, Checkstyle and SpotBugs
         run: bash ./mvnw --batch-mode --no-transfer-progress clean verify
 
       - name: SonarQube analysis and Quality Gate
