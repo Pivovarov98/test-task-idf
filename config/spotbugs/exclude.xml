@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<FindBugsFilter>
+    <!-- Spring owns and shares JdbcTemplate; defensive copying would break managed infrastructure. -->
+    <Match>
+        <Class name="org.example.testtaskidf.repository.JdbcTransactionRepository"/>
+        <Method name="&lt;init&gt;"/>
+        <Bug pattern="EI_EXPOSE_REP2"/>
+    </Match>
+</FindBugsFilter>

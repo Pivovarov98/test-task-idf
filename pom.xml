@@ -29,10 +29,20 @@
     <properties>
         <java.version>21</java.version>
         <archunit.version>1.5.0</archunit.version>
+        <mapstruct.version>1.6.3</mapstruct.version>
         <sonar.sourceEncoding>UTF-8</sonar.sourceEncoding>
         <sonar.coverage.jacoco.xmlReportPaths>${project.build.directory}/site/jacoco/jacoco.xml</sonar.coverage.jacoco.xmlReportPaths>
     </properties>
     <dependencies>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-validation</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.mapstruct</groupId>
+            <artifactId>mapstruct</artifactId>
+            <version>${mapstruct.version}</version>
+        </dependency>
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-flyway</artifactId>
@@ -113,6 +123,7 @@
                     <threshold>Low</threshold>
                     <failOnError>true</failOnError>
                     <xmlOutput>true</xmlOutput>
+                    <excludeFilterFile>config/spotbugs/exclude.xml</excludeFilterFile>
                 </configuration>
                 <executions>
                     <execution>
@@ -165,6 +176,11 @@
                         </goals>
                         <configuration>
                             <annotationProcessorPaths>
+                                <path>
+                                    <groupId>org.mapstruct</groupId>
+                                    <artifactId>mapstruct-processor</artifactId>
+                                    <version>${mapstruct.version}</version>
+                                </path>
                                 <path>
                                     <groupId>org.projectlombok</groupId>
                                     <artifactId>lombok</artifactId>
