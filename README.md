@@ -176,13 +176,37 @@ API-тесты проверяют запросы, валидацию, сохра
 Unit-тесты можно выполнить без Docker:
 
 ```powershell
-./mvnw.cmd "-Dtest=TransactionServiceTests,TransactionMapperTests,JdbcTransactionRepositoryTests,CurrencyCodeValidatorTests,ExpenseCategoryUtilsTests,FieldNameUtilsTests" test
+./mvnw.cmd test
 ```
 
 `verify` также выполняет архитектурные проверки ArchUnit, Checkstyle и SpotBugs.
 Отчёт покрытия JaCoCo: `target/site/jacoco/index.html`.
-CI в `.github/workflows` выполняет сборку и проверки; анализ SonarQube включается при настройке
-`SONAR_HOST_URL`, `SONAR_PROJECT_KEY` и секрета `SONAR_TOKEN`.
+Maven автоматически активирует профиль `test` из `src/test/resources/application-test.properties`.
+Подключение к БД задаёт `@ServiceConnection`; резервный URL намеренно недоступен, чтобы при
+отсутствии контейнерной конфигурации тест не подключился к локальной рабочей БД.
+Параллельное выполнение JUnit отключено, поскольку интеграционные тесты используют общий Spring-контекст.
+
+Surefire выполняет unit-тесты и ArchUnit в фазе `test`. Failsafe выполняет классы
+`*IntegrationTests`, `*ApiTests`, `*MigrationTests` и `TestTaskIdfApplicationTests` в фазе
+`integration-test` и проверяет результаты в `verify`. Для новых интеграционных тестов используйте
+суффикс `IntegrationTests` и импорт `PostgresTestConfiguration`.
+Результаты: `target/surefire-reports` и `target/failsafe-reports`.
+
+### Test-stage в CI
+
+GitHub Actions (`.github/workflows/ci.yml`) запускается на push, pull request и вручную:
+
+1. `build` собирает JAR на JDK 21 и сохраняет артефакт `application-jar`.
+2. `test` (Test stage) после успешной сборки проверяет доступность Docker и запускает
+   `./mvnw --batch-mode --no-transfer-progress clean verify`.
+3. Testcontainers самостоятельно создаёт PostgreSQL на динамическом порту; отдельный
+   PostgreSQL service и секреты подключения к БД в CI не нужны.
+4. Ошибка тестов, ArchUnit, Checkstyle или SpotBugs завершает test-stage с ошибкой.
+   Отчёты Surefire, Failsafe, Checkstyle, SpotBugs и JaCoCo сохраняются в артефакт
+   `test-and-quality-reports` на 7 дней даже при неуспешном прогоне.
+
+Анализ SonarQube включается при настройке `SONAR_HOST_URL`, `SONAR_PROJECT_KEY` и секрета
+`SONAR_TOKEN`; для SonarCloud также нужен `SONAR_ORGANIZATION`.
 
 ## JavaDoc
 
