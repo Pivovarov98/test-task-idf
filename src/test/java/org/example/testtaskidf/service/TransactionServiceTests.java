@@ -28,6 +28,8 @@ import static org.mockito.Mockito.verifyNoInteractions;
 class TransactionServiceTests {
     @Mock
     private TransactionRepository repository;
+    @Mock
+    private AccountRegistrationService accounts;
     private final Instant now = Instant.parse("2026-10-07T12:00:00Z");
 
     @Test
@@ -60,7 +62,7 @@ class TransactionServiceTests {
 
     private TransactionService service() {
         return new TransactionService(repository, Mappers.getMapper(TransactionMapper.class),
-                Clock.fixed(now, ZoneOffset.UTC));
+                Clock.fixed(now, ZoneOffset.UTC), accounts);
     }
 
     private TransactionRequest request(String category) {

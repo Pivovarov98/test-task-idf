@@ -1,9 +1,53 @@
 # Bank Transactions API
 
-Хранение месячных лимитов и московский календарный месяц (UTC+3) описаны в [LIMITS.md](LIMITS.md).
+Месячный лимит по умолчанию — 1000 USD отдельно для каждой категории счёта;
+бизнес-календарь использует московское время (UTC+3).
+Клиентский API установки лимита, регистрация счетов и блокировки описаны в
+[LIMIT_CREATION.md](LIMIT_CREATION.md).
 
 Сервис приёма банковских транзакций. Проверяет входные данные, присваивает UUID и время
 получения в UTC, сохраняет транзакцию в PostgreSQL и возвращает HTTP `201`.
+Клиентский API устанавливает лимиты, сохраняя историю изменений. API доступны без авторизации.
+
+## Адреса для тестирования
+
+| Метод | URL | Назначение |
+| --- | --- | --- |
+| POST | `http://localhost:8080/api/v1/bank/transactions` | Приём транзакции |
+| POST | `http://localhost:8080/api/v1/client/limits` | Установка нового лимита |
+| GET | `http://localhost:8080/swagger-ui/index.html` | Swagger UI: Try it out → Execute |
+| GET | `http://localhost:8080/v3/api-docs` | OpenAPI JSON |
+
+Для POST используйте `Content-Type: application/json`. Получение всех лимитов,
+списка превышений и расчёт `limit_exceeded` пока не реализованы.
+
+## Установка лимита
+
+`POST http://localhost:8080/api/v1/client/limits`:
+
+```json
+{
+  "account": "0000000123",
+  "expense_category": "product",
+  "amount": 1500.00
+}
+```
+
+Ответ `201` содержит `id`, `account`, `expense_category`, `amount`, `currency: USD`
+и `established_at` с часовым смещением `+03:00`. Дату и валюту назначает сервер;
+передача этих или неизвестных полей возвращает `400`.
+
+Новый счёт регистрируется автоматически; пока лимит не установлен, действует 1000 USD
+отдельно для `product` и `service`. Лимит может быть нулевым. Каждая установка создаёт
+новую запись, существующие записи обновлять нельзя.
+
+Повтор того же запроса вернёт `409` с `code: limit_amount_unchanged`, включая попытку
+установить дефолтные 1000 USD. Если другой запрос для того же счёта и категории ещё
+выполняется, ответ — `409` с `code: limit_request_in_progress`. Другие категории и счета
+обрабатываются параллельно. Ошибки используют ProblemDetail (RFC 9457).
+
+Для проверки в Swagger сначала установите 1500, затем повторите запрос (ожидается 409),
+затем установите 0 (ожидается 201). В категории `service` останется дефолтный лимит 1000 USD.
 
 ## Стек
 
@@ -24,6 +68,17 @@ docker compose up -d --wait
 В Linux/macOS используйте `./mvnw` вместо `./mvnw.cmd`.
 Flyway автоматически создаёт таблицу и применяет миграции при старте приложения.
 Приложение слушает порт `8080`; Compose публикует PostgreSQL на `127.0.0.1:5432`.
+Если `5432` занят локальным PostgreSQL, используйте другой порт, например `15432`:
+
+```powershell
+$env:DB_PORT = '15432'
+$env:DB_URL = 'jdbc:postgresql://localhost:15432/test_task_idf'
+docker compose up -d --wait
+./mvnw.cmd spring-boot:run
+```
+
+В IDE для этого варианта: host `localhost`, port `15432`, database `test_task_idf`,
+user и password `test_task_idf`. При смене порта Docker volume с данными сохраняется.
 Остановить БД можно командой `docker compose stop`; данные сохраняются в Docker volume.
 
 Для запуска собранного приложения:
@@ -38,6 +93,7 @@ java -jar target/test-task-idf-0.0.1-SNAPSHOT.jar
 | Переменная | Значение по умолчанию |
 | --- | --- |
 | `DB_URL` | `jdbc:postgresql://localhost:5432/test_task_idf` |
+| `DB_PORT` | `5432` (порт PostgreSQL в Docker Compose) |
 | `DB_USERNAME` | `test_task_idf` |
 | `DB_PASSWORD` | `test_task_idf` |
 | `SERVER_PORT` | `8080` |
@@ -154,6 +210,8 @@ PostgreSQL хранит временные поля как `TIMESTAMP WITH TIME 
 - `dto` — контракт запроса и ответа, валидация и Swagger-схемы.
 - `service` — генерация UUID, время из Clock, транзакционная граница и MapStruct-маппер.
 - `repository` — вставка через JdbcTemplate с параметрами.
+- `accounts` в БД — реестр счетов; `transactions.account_from` и `expense_limits.account`
+  ссылаются на него. `account_to` хранится как счёт контрагента без обязательной регистрации.
 - `model` — неизменяемая модель с доменными ограничениями.
 - `config` — Clock, валидатор валюты и метаданные OpenAPI.
 - `util` — преобразование категорий и имён полей.
@@ -161,6 +219,7 @@ PostgreSQL хранит временные поля как `TIMESTAMP WITH TIME 
 
 Сохранение и построение ответа выполняются в одной транзакции. Runtime-исключение,
 включая ошибку маппинга ответа после INSERT, приводит к rollback.
+Регистрация счёта выполняется отдельной транзакцией и сохраняется при отклонении установки лимита.
 
 ## Тестирование и проверки
 

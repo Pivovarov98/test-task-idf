@@ -9,6 +9,7 @@ import org.example.testtaskidf.model.ExpenseCategory;
 import org.example.testtaskidf.model.ExpenseLimit;
 import org.example.testtaskidf.repository.ExpenseLimitRepository;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -34,6 +35,15 @@ class ExpenseLimitIntegrationTests {
 
     @Autowired
     private JdbcTemplate jdbcTemplate;
+
+    @BeforeEach
+    void registerAccounts() {
+        jdbcTemplate.update("""
+                INSERT INTO accounts (account_number, created_at)
+                VALUES ('0000000321', CURRENT_TIMESTAMP), ('0000000999', CURRENT_TIMESTAMP)
+                ON CONFLICT DO NOTHING
+                """);
+    }
 
     @Test
     void selectsHistoricalLimitAndKeepsAccountsAndCategoriesSeparate() {

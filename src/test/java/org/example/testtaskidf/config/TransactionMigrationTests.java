@@ -5,6 +5,7 @@ import java.time.OffsetDateTime;
 import java.util.UUID;
 
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.BeforeEach;
 import org.example.testtaskidf.PostgresTestConfiguration;
 import org.springframework.context.annotation.Import;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -26,6 +27,14 @@ class TransactionMigrationTests {
 
     @Autowired
     private JdbcTemplate jdbcTemplate;
+
+    @BeforeEach
+    void registerSourceAccount() {
+        jdbcTemplate.update("""
+                INSERT INTO accounts (account_number, created_at) VALUES ('0000000123', CURRENT_TIMESTAMP)
+                ON CONFLICT DO NOTHING
+                """);
+    }
 
     @ParameterizedTest
     @ValueSource(strings = {"product", "service"})

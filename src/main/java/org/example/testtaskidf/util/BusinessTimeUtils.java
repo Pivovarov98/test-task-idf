@@ -1,6 +1,7 @@
 package org.example.testtaskidf.util;
 
 import java.time.Instant;
+import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 
 import org.example.testtaskidf.model.MonthPeriod;
@@ -10,6 +11,10 @@ public final class BusinessTimeUtils {
     private static final ZoneOffset BUSINESS_OFFSET = ZoneOffset.ofHours(3);
 
     private BusinessTimeUtils() {
+    }
+
+    public static OffsetDateTime toBusinessTime(Instant instant) {
+        return instant.atOffset(BUSINESS_OFFSET);
     }
 
     /** Returns month boundaries in UTC instants, with the beginning included and the next month excluded. */
