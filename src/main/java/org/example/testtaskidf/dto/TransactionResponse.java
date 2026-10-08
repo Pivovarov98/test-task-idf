@@ -30,5 +30,11 @@ public record TransactionResponse(
         @JsonProperty("expense_category") String expenseCategory,
         @Schema(example = "2022-01-30T00:00:00+06:00") OffsetDateTime datetime,
         @Schema(description = "Server receipt time in UTC", example = "2026-10-07T12:00:00Z")
-        @JsonProperty("received_at") OffsetDateTime receivedAt) {
+        @JsonProperty("received_at") OffsetDateTime receivedAt,
+        @Schema(description = "Calculated USD amount; absent while pending or unsupported", example = "20.50")
+        @JsonProperty("amount_usd") BigDecimal amountUsd,
+        @Schema(allowableValues = {"PENDING", "COMPLETED", "UNSUPPORTED_CURRENCY"})
+        @JsonProperty("conversion_status") String conversionStatus,
+        @Schema(description = "Saved quote used for conversion; absent for USD or pending calculations")
+        @JsonProperty("exchange_rate_id") UUID exchangeRateId) {
 }
