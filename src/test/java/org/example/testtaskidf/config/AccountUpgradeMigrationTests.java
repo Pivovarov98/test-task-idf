@@ -19,6 +19,40 @@ class AccountUpgradeMigrationTests {
     private DataSource dataSource;
 
     @Test
+    void conversionMigrationPreservesOriginalTransactionsAndBackfillsUsdOnly() throws Exception {
+        var schema = "currency_upgrade_test";
+        Flyway.configure().dataSource(dataSource).schemas(schema).defaultSchema(schema).target("4").load().migrate();
+        try (Connection connection = dataSource.getConnection(); var statement = connection.createStatement()) {
+            connection.setAutoCommit(false);
+            statement.execute("SET LOCAL search_path TO " + schema);
+            statement.execute("""
+                    INSERT INTO accounts (account_number, created_at) VALUES ('0000000001', CURRENT_TIMESTAMP)
+                    """);
+            statement.execute("""
+                    INSERT INTO transactions
+                        (account_from, account_to, currency_shortname, sum, expense_category, datetime)
+                    VALUES ('0000000001', '9999999999', 'USD', 10.50, 'product', '2022-01-01T00:00:00Z'),
+                           ('0000000001', '9999999999', 'KZT', 5000, 'service', '2022-01-01T00:00:00Z')
+                    """);
+            connection.commit();
+        }
+        Flyway.configure().dataSource(dataSource).schemas(schema).defaultSchema(schema).load().migrate();
+        try (Connection connection = dataSource.getConnection(); var statement = connection.createStatement();
+                var rows = statement.executeQuery("SELECT currency_shortname, sum, amount_usd, conversion_status FROM "
+                        + schema + ".transactions ORDER BY currency_shortname")) {
+            assertThat(rows.next()).isTrue();
+            assertThat(rows.getString("currency_shortname")).isEqualTo("KZT");
+            assertThat(rows.getBigDecimal("sum")).isEqualByComparingTo("5000");
+            assertThat(rows.getBigDecimal("amount_usd")).isNull();
+            assertThat(rows.getString("conversion_status")).isEqualTo("PENDING");
+            assertThat(rows.next()).isTrue();
+            assertThat(rows.getBigDecimal("amount_usd")).isEqualByComparingTo("10.50");
+            assertThat(rows.getString("conversion_status")).isEqualTo("COMPLETED");
+            assertThat(rows.next()).isFalse();
+        }
+    }
+
+    @Test
     void backfillsExistingSourceAndLimitAccountsWithoutRegisteringCounterparty() throws Exception {
         var schema = "account_upgrade_test";
         Flyway.configure().dataSource(dataSource).schemas(schema).defaultSchema(schema).target("3").load().migrate();
