@@ -8,7 +8,7 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.example.testtaskidf.dto.TransactionRequest;
 import org.example.testtaskidf.dto.TransactionResponse;
-import org.example.testtaskidf.service.TransactionService;
+import org.example.testtaskidf.service.BankTransactionService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ProblemDetail;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -23,8 +23,8 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/api/v1/bank/transactions")
 public class TransactionController {
 
-    private final TransactionService service;
-    public TransactionController(TransactionService service) {
+    private final BankTransactionService service;
+    public TransactionController(BankTransactionService service) {
         this.service = service;
     }
 
@@ -36,6 +36,8 @@ public class TransactionController {
      */
     @Operation(summary = "Receive a bank transaction",
             description = "Creates a new transaction on each call. The server generates id and received_at. "
+                    + "Rates are read from the local database. Missing rates leave conversion_status=PENDING; "
+                    + "background processing completes the USD amount. No external HTTP call is made during receipt. "
                     + "The operation is not idempotent; repeated requests create separate records.",
             responses = {
                 @ApiResponse(responseCode = "201", description = "Transaction saved",

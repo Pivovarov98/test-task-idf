@@ -29,9 +29,10 @@ class JdbcTransactionRepositoryTests {
 
         new JdbcTransactionRepository(jdbcTemplate).save(transaction);
 
-        verify(jdbcTemplate).update(contains("VALUES (?, ?, ?, ?, ?, ?, ?, ?)"), eq(transaction.id()),
+        verify(jdbcTemplate).update(contains("VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)"), eq(transaction.id()),
                 eq(transaction.accountFrom()), eq(transaction.accountTo()), eq(transaction.currencyShortname()),
-                eq(transaction.sum()), eq(category), eq(transaction.datetime()), eq(transaction.receivedAt()));
+                eq(transaction.sum()), eq(category), eq(transaction.datetime()), eq(transaction.receivedAt()),
+                eq(transaction.receivedAt()));
         verifyNoMoreInteractions(jdbcTemplate);
     }
 }

@@ -6,6 +6,7 @@ import java.util.UUID;
 import org.example.testtaskidf.dto.TransactionRequest;
 import org.example.testtaskidf.dto.TransactionResponse;
 import org.example.testtaskidf.model.Transaction;
+import org.example.testtaskidf.model.ConversionResult;
 import org.example.testtaskidf.util.ExpenseCategoryUtils;
 import org.mapstruct.Mapper;
 import org.mapstruct.Context;
@@ -34,5 +35,17 @@ public interface TransactionMapper {
      * @param transaction source transaction, or null
      * @return response, or null when transaction is null
      */
-    TransactionResponse toResponse(Transaction transaction);
+    default TransactionResponse toResponse(Transaction transaction) {
+        return toResponse(transaction, new ConversionResult(null, "PENDING", null));
+    }
+
+    @Mapping(target = "amountUsd", expression = "java(conversion.amountUsd())")
+    @Mapping(target = "conversionStatus", expression = "java(conversion.status())")
+    @Mapping(target = "exchangeRateId", expression = "java(conversion.exchangeRateId())")
+    TransactionResponse toResponse(Transaction transaction, @Context ConversionResult conversion);
+
+    @Mapping(target = "amountUsd", expression = "java(conversion.amountUsd())")
+    @Mapping(target = "conversionStatus", expression = "java(conversion.status())")
+    @Mapping(target = "exchangeRateId", expression = "java(conversion.exchangeRateId())")
+    TransactionResponse withConversion(TransactionResponse response, @Context ConversionResult conversion);
 }

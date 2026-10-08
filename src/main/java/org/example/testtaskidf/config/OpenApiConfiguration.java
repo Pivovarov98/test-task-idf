@@ -11,6 +11,7 @@ import org.springframework.context.annotation.Configuration;
                 + "Unknown source accounts are registered automatically. Default limit: 1000 USD per category. "
                 + "Limit timestamps are assigned by the server and returned at UTC+03:00. "
                 + "Errors use RFC 9457 application/problem+json; validation errors contain errors, "
-                + "limit conflicts contain code. Currency conversion and exceeded-limit queries are not implemented."))
+                + "limit conflicts contain code. USD conversion uses cached OER daily values or remains PENDING. "
+                + "Exceeded-limit queries are not implemented."))
 public class OpenApiConfiguration {
 }

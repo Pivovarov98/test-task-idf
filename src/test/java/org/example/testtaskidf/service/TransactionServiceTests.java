@@ -40,7 +40,9 @@ class TransactionServiceTests {
         verify(repository).save(saved.capture());
         assertThat(response.id()).isEqualTo(saved.getValue().id());
         assertThat(response.id().version()).isEqualTo(4);
-        assertThat(response).usingRecursiveComparison().ignoringFields("id", "receivedAt").isEqualTo(request);
+        assertThat(response).usingRecursiveComparison()
+                .ignoringFields("id", "receivedAt", "amountUsd", "conversionStatus", "exchangeRateId")
+                .isEqualTo(request);
         assertThat(response.receivedAt().toInstant()).isEqualTo(now);
         assertThat(saved.getValue().receivedAt().toInstant()).isEqualTo(now);
         assertThat(saved.getValue().sum()).isEqualTo(request.sum());
