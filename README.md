@@ -434,6 +434,52 @@ GitHub Actions (`.github/workflows/ci.yml`) запускается на push, pu
 
 Результат: `target/reports/apidocs/index.html`. Сгенерированные MapStruct-реализации исключены из JavaDoc.
 
+## MCP-сервер для Codex
+
+В репозитории хранится [`.codex/config.toml`](.codex/config.toml) с подключением
+Context7 по Streamable HTTP (`https://mcp.context7.com/mcp`). Он предоставляет агенту
+документацию Spring и других библиотек. Устанавливать Node.js или запускать отдельный
+локальный сервер не нужно; требуется доступ в интернет.
+
+Codex загружает проектную конфигурацию только для доверенного проекта:
+откройте корень репозитория в Codex и подтвердите доверие, если клиент его запросит.
+После добавления конфигурации перезапустите клиент. Формат и расположение описаны
+в [документации Codex MCP](https://learn.chatgpt.com/docs/extend/mcp?surface=cli).
+
+Базовое подключение работает без ключа. При необходимости ключ Context7 задаётся
+переменной окружения `CONTEXT7_API_KEY` процесса Codex. Конфигурация через
+`env_http_headers` передаёт её значение в одноимённый HTTP-заголовок. Сам ключ
+не добавляйте в TOML, README или другие файлы репозитория; `.env` автоматически
+не загружается. Например, в macOS/Linux можно ввести ключ без сохранения в истории:
+
+```sh
+read -rs CONTEXT7_API_KEY
+export CONTEXT7_API_KEY
+codex
+```
+
+Для desktop-клиента переменная должна быть доступна процессу приложения при запуске.
+Проверка из корня репозитория:
+
+```sh
+codex mcp get context7 --json
+codex mcp list
+```
+
+Ожидается `context7`, `enabled: true`, транспорт `streamable_http` и URL выше.
+Эти команды проверяют загрузку конфигурации, но не сетевое соединение. Для проверки
+использования откройте `/mcp` в Codex CLI и отправьте запрос:
+
+```text
+Используй Context7: найди документацию Spring Boot по @ServiceConnection
+и Testcontainers. Сначала вызови resolve-library-id, затем query-docs.
+Приведи ссылку на документацию. Файлы проекта не меняй.
+```
+
+Проверено 09.10.2026: `codex mcp get context7 --json` читает проектную конфигурацию;
+прямой MCP-запрос `initialize` без API-ключа успешно возвращает сервер Context7.
+Доступность документации зависит от сети и лимитов внешнего сервиса.
+
 ## Проектный Agent Skill
 
 [`.agents/skills/idf-limit-tests/SKILL.md`](.agents/skills/idf-limit-tests/SKILL.md)
