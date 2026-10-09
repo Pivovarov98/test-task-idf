@@ -16,6 +16,6 @@ import org.springframework.context.annotation.Configuration;
                 + "Operations reserve fixed USD amounts before bank completion. Final bank notifications retain "
                 + "or release reservations; three hours of continuous polling errors cause TIMED_OUT. "
                 + "Late success after timeout restores the original expense. The local bank stub is configurable. "
-                + "Exceeded-limit queries are not implemented."))
+                + "The client API lists successful exceeded transactions with the original applied limit."))
 public class OpenApiConfiguration {
 }

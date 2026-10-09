@@ -40,10 +40,15 @@ public class JdbcExpenseLimitRepository implements ExpenseLimitRepository {
     @Override
     public Optional<ExpenseLimit> findLatest(String account, ExpenseCategory category, Instant asOf) {
         return jdbcTemplate.query("""
-                SELECT id, account, expense_category, amount, currency, established_at
-                FROM expense_limits
-                WHERE account = ? AND expense_category = ? AND established_at <= ?
-                ORDER BY established_at DESC, revision DESC
+                SELECT l.id, l.account, l.expense_category, l.amount, l.currency, l.established_at
+                FROM expense_limits l JOIN (
+                    SELECT account, expense_category, MAX(established_at) AS established_at
+                    FROM expense_limits
+                    WHERE account = ? AND expense_category = ? AND established_at <= ?
+                    GROUP BY account, expense_category
+                ) latest ON latest.account = l.account AND latest.expense_category = l.expense_category
+                    AND latest.established_at = l.established_at
+                ORDER BY l.revision DESC
                 LIMIT 1
                 """, (row, index) -> new ExpenseLimit(row.getObject("id", UUID.class), row.getString("account"),
                 ExpenseCategoryUtils.fromCode(row.getString("expense_category")), row.getBigDecimal("amount"),
