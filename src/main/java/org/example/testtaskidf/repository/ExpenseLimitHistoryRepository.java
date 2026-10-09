@@ -10,7 +10,12 @@ import org.example.testtaskidf.util.ExpenseCategoryUtils;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Repository;
 
-/** Reads user history and implicit defaults without creating or changing any limit records. */
+/**
+ * Reads user history and implicit defaults without creating or changing any limit records.
+ * Defaults are generated for both categories in the registration month and for operation months
+ * before the first user limit becomes active. UNION deduplicates registration and operation months;
+ * intervening unused months are not generated. All month boundaries use fixed UTC+03:00.
+ */
 @Repository
 public class ExpenseLimitHistoryRepository {
     private static final String HISTORY = """
@@ -52,19 +57,37 @@ public class ExpenseLimitHistoryRepository {
         this.jdbc = jdbc;
     }
 
-    /** Returns whether the account exists; reading never registers an unknown account. */
+    /**
+     * Checks registration without inserting an account.
+     *
+     * @param account ten-digit source account
+     * @return whether the source account exists
+     */
     public boolean accountExists(String account) {
         return Boolean.TRUE.equals(jdbc.queryForObject(
                 "SELECT EXISTS(SELECT 1 FROM accounts WHERE account_number = ?)", Boolean.class, account));
     }
 
-    /** Counts both user and default entries using the same grouped history as page retrieval. */
+    /**
+     * Counts both user and default entries using the same grouped history as page retrieval.
+     *
+     * @param account source account
+     * @return total history entries, including zero user limits and both categories
+     */
     public long count(String account) {
         return Objects.requireNonNull(jdbc.queryForObject(
                 HISTORY + "SELECT COUNT(*) FROM history", Long.class, account));
     }
 
-    /** Returns a bounded page, ordered by establishment time, user revision and category. */
+    /**
+     * Returns a bounded page, ordered by establishment time, user revision and category.
+     * The caller owns the read transaction so count and content can share a snapshot.
+     *
+     * @param account source account
+     * @param offset nonnegative row offset
+     * @param size bounded page size
+     * @return history projections; implicit defaults have null IDs and month-start establishment times
+     */
     public List<ExpenseLimitHistoryEntry> findPage(String account, long offset, int size) {
         return jdbc.query(HISTORY + """
                 SELECT id, account, expense_category, amount, currency, established_at FROM history
@@ -76,4 +99,3 @@ public class ExpenseLimitHistoryRepository {
                 row.getObject("established_at", OffsetDateTime.class).toInstant()), account, size, offset);
     }
 }
-

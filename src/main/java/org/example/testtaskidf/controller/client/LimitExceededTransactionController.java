@@ -3,6 +3,7 @@ package org.example.testtaskidf.controller.client;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.ExampleObject;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -31,11 +32,13 @@ public class LimitExceededTransactionController {
 
     /**
      * Reads both categories with original transaction fields and the limit exceeded at reservation.
+     * Only SUCCEEDED operations with a completed check and true flag are eligible. Timestamps are
+     * presented at fixed UTC+03:00. Reading does not poll the bank or recalculate rates or flags.
      *
      * @param account existing ten-digit source account
      * @param page zero-based page number
      * @param size page size between 1 and 100, default 20
-     * @return newest-first page of completed successful exceedances
+     * @return newest-first page; an account with no eligible operations gets empty content and zero totals
      */
     @GetMapping
     @Operation(summary = "Get successful transactions exceeding their limit",
@@ -47,11 +50,32 @@ public class LimitExceededTransactionController {
                     + "Timestamps are presented at UTC+03:00; currency conversion is not repeated. "
                     + "Late success can add a transaction to the list without rewriting previous flags. "
                     + "Sort: datetime DESC, operation_sequence DESC. No category or date filters. "
-                    + "Pages start at zero; default size is 20, maximum 100. Beyond the result set, content is empty.",
+                    + "Pages start at zero; default size is 20, maximum 100. Beyond the result set, content is empty. "
+                    + "Totals and content share one database snapshot. Separate page requests may shift after writes. "
+                    + "GET never registers accounts; all errors use RFC 9457 application/problem+json.",
             responses = {
                 @ApiResponse(responseCode = "200", description = "Page of exceedances; empty content when none exist",
                         content = @Content(mediaType = "application/json",
-                                schema = @Schema(implementation = LimitExceededTransactionPageResponse.class))),
+                                schema = @Schema(implementation = LimitExceededTransactionPageResponse.class),
+                                examples = {
+                                    @ExampleObject(name = "January example", value = """
+                                            {"content":[
+                                              {"account_from":"0000000123","account_to":"9999999999",
+                                               "currency_shortname":"USD","sum":100.00,"expense_category":"product",
+                                               "datetime":"2022-01-13T12:00:00+03:00","limit_sum":2000.00,
+                                               "limit_datetime":"2022-01-10T12:00:00+03:00",
+                                               "limit_currency_shortname":"USD"},
+                                              {"account_from":"0000000123","account_to":"9999999999",
+                                               "currency_shortname":"USD","sum":600.00,"expense_category":"product",
+                                               "datetime":"2022-01-03T12:00:00+03:00","limit_sum":1000.00,
+                                               "limit_datetime":"2022-01-01T00:00:00+03:00",
+                                               "limit_currency_shortname":"USD"}],
+                                             "page":0,"size":20,"total_elements":2,"total_pages":1}
+                                            """),
+                                    @ExampleObject(name = "No exceedances", value = """
+                                            {"content":[],"page":0,"size":20,"total_elements":0,"total_pages":0}
+                                            """)
+                                })),
                 @ApiResponse(responseCode = "400", description = "Invalid account or pagination parameters",
                         content = @Content(mediaType = "application/problem+json",
                                 schema = @Schema(implementation = ProblemDetail.class))),
@@ -67,11 +91,13 @@ public class LimitExceededTransactionController {
             })
     public LimitExceededTransactionPageResponse getAll(
             @Parameter(description = "Existing source account", example = "0000000123",
-                    schema = @Schema(pattern = "[0-9]{10}"))
+                    schema = @Schema(pattern = "[0-9]{10}", minLength = 10, maxLength = 10))
             @PathVariable @Pattern(regexp = "[0-9]{10}") String account,
-            @Parameter(schema = @Schema(minimum = "0", defaultValue = "0"))
+            @Parameter(description = "Zero-based page number",
+                    schema = @Schema(minimum = "0", maximum = "2147483647", defaultValue = "0"))
             @RequestParam(defaultValue = "0") @Min(0) int page,
-            @Parameter(schema = @Schema(minimum = "1", maximum = "100", defaultValue = "20"))
+            @Parameter(description = "Number of entries per page, from 1 to 100",
+                    schema = @Schema(minimum = "1", maximum = "100", defaultValue = "20"))
             @RequestParam(defaultValue = "20") @Min(1) @Max(100) int size) {
         return service.getAll(account, page, size);
     }

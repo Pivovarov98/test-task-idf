@@ -25,6 +25,11 @@ public interface ExpenseLimitMapper {
 
     ExpenseLimitResponse toResponse(ExpenseLimit limit);
 
-    /** Maps user or implicit default history, returning timestamps in Moscow business time. */
+    /**
+     * Maps user or implicit default history without inventing an identifier for a default.
+     *
+     * @param limit historical projection, or null
+     * @return response with UTC+03:00 timestamp and nullable default ID, or null for a null projection
+     */
     ExpenseLimitResponse toResponse(ExpenseLimitHistoryEntry limit);
 }

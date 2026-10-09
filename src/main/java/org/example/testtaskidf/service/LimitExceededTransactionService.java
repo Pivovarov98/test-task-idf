@@ -27,11 +27,15 @@ public class LimitExceededTransactionService {
     /**
      * Returns successful exceeded operations with the fixed historical limit, including late bank success.
      *
+     * The account check, count and page are read within one REPEATABLE_READ snapshot. No writes
+     * or external API requests occur. A page beyond the result set retains totals with empty content.
+     *
      * @param account existing ten-digit source account
      * @param page zero-based page number
      * @param size page size between 1 and 100
      * @return page of the exact task 6 response fields
      * @throws ResponseStatusException for invalid arguments (400) or an unknown account (404)
+     * @throws org.springframework.dao.DataAccessException if a database read fails
      */
     @Transactional(readOnly = true, isolation = Isolation.REPEATABLE_READ)
     public LimitExceededTransactionPageResponse getAll(String account, int page, int size) {

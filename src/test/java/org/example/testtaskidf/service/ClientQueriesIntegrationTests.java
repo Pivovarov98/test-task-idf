@@ -380,7 +380,23 @@ class ClientQueriesIntegrationTests {
                 .andExpect(jsonPath("$.components.schemas.LimitExceededTransactionResponse.properties",
                         org.hamcrest.Matchers.aMapWithSize(9)))
                 .andExpect(jsonPath("$.components.schemas.LimitExceededTransactionResponse"
-                        + ".properties.limit_currency_shortname.enum[0]").value("USD"));
+                        + ".properties.limit_currency_shortname.enum[0]").value("USD"))
+                .andExpect(jsonPath("$.components.schemas.ExpenseLimitPageResponse.required")
+                        .value(org.hamcrest.Matchers.containsInAnyOrder(
+                                "content", "page", "size", "total_elements", "total_pages")))
+                .andExpect(jsonPath("$.components.schemas.LimitExceededTransactionPageResponse.properties.size.maximum")
+                        .value(100))
+                .andExpect(jsonPath("$.components.schemas.ExpenseLimitResponse.properties.id.type")
+                        .value(org.hamcrest.Matchers.hasItem("null")))
+                .andExpect(jsonPath("$.paths['/api/v1/client/accounts/{account}/limits'].get.responses['200']"
+                        + ".content['application/json'].examples['New account defaults'].value.total_elements")
+                        .value(2))
+                .andExpect(jsonPath("$.paths['/api/v1/client/accounts/{account}/transactions/limit-exceeded']"
+                        + ".get.responses['200'].content['application/json'].examples['January example']"
+                        + ".value.content[0].limit_sum").value(2000))
+                .andExpect(jsonPath("$.paths['/api/v1/client/accounts/{account}/transactions/limit-exceeded']"
+                        + ".get.responses['200'].content['application/json'].examples['No exceedances']"
+                        + ".value.total_pages").value(0));
     }
 
     @Test

@@ -7,7 +7,9 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import io.swagger.v3.oas.annotations.media.Schema;
 
 /**
- * Task 6 contract: six original transaction fields and three fields describing the exceeded limit.
+ * Task 6 contract: exactly six original transaction fields and three fields describing the exceeded limit.
+ * The original amount and currency are preserved. Both timestamps are presented at fixed UTC+03:00;
+ * datetime is creation time, not receipt or completion time. Later limit changes do not alter this result.
  *
  * @param accountFrom source account
  * @param accountTo counterparty account
@@ -21,16 +23,17 @@ import io.swagger.v3.oas.annotations.media.Schema;
  */
 @Schema(description = "Successful exceeded transaction with the limit fixed at reservation")
 public record LimitExceededTransactionResponse(
-        @Schema(example = "0000000123") @JsonProperty("account_from") String accountFrom,
-        @Schema(example = "9999999999") @JsonProperty("account_to") String accountTo,
-        @Schema(example = "USD") @JsonProperty("currency_shortname") String currencyShortname,
+        @Schema(pattern = "[0-9]{10}", example = "0000000123") @JsonProperty("account_from") String accountFrom,
+        @Schema(pattern = "[0-9]{10}", example = "9999999999") @JsonProperty("account_to") String accountTo,
+        @Schema(description = "Original ISO 4217 currency; can differ from the USD limit currency",
+                pattern = "[A-Z]{3}", example = "USD") @JsonProperty("currency_shortname") String currencyShortname,
         @Schema(description = "Original transaction amount in currency_shortname", example = "600.00") BigDecimal sum,
         @Schema(allowableValues = {"product", "service"})
         @JsonProperty("expense_category") String expenseCategory,
         @Schema(description = "Operation creation time, presented in Moscow time (UTC+03:00)",
                 type = "string", format = "date-time", example = "2022-01-03T00:00:00+03:00") OffsetDateTime datetime,
         @Schema(description = "Historical USD limit, including zero; later changes do not replace it",
-                example = "1000.00") @JsonProperty("limit_sum") BigDecimal limitSum,
+                minimum = "0", example = "1000.00") @JsonProperty("limit_sum") BigDecimal limitSum,
         @Schema(description = "User establishment time, or creation month's start for the default 1000 USD",
                 type = "string", format = "date-time", example = "2022-01-01T00:00:00+03:00")
         @JsonProperty("limit_datetime") OffsetDateTime limitDatetime,

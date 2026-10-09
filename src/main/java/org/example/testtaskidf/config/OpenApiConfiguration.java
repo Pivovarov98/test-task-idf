@@ -16,6 +16,9 @@ import org.springframework.context.annotation.Configuration;
                 + "Operations reserve fixed USD amounts before bank completion. Final bank notifications retain "
                 + "or release reservations; three hours of continuous polling errors cause TIMED_OUT. "
                 + "Late success after timeout restores the original expense. The local bank stub is configurable. "
-                + "The client API lists successful exceeded transactions with the original applied limit."))
+                + "The client API lists successful exceeded transactions with nine fields and the applied limit. "
+                + "Both client lists use zero-based pagination (size 20 by default, maximum 100). "
+                + "History includes default limits with null IDs and Moscow month-start timestamps. "
+                + "Reading an unknown account returns 404 without registration. No authentication is required."))
 public class OpenApiConfiguration {
 }

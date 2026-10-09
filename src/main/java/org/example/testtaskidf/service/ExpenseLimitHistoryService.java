@@ -23,11 +23,15 @@ public class ExpenseLimitHistoryService {
     /**
      * Returns all categories and amounts, including zero, without filters or account registration.
      *
+     * The account check, count and page are read within one REPEATABLE_READ snapshot. No writes
+     * or external API requests occur. A page beyond the result set retains totals with empty content.
+     *
      * @param account ten-digit source account
      * @param page zero-based page number
      * @param size page size between 1 and 100
      * @return newest-first page of user and default history
      * @throws ResponseStatusException for invalid arguments (400) or an unknown account (404)
+     * @throws org.springframework.dao.DataAccessException if a database read fails
      */
     @Transactional(readOnly = true, isolation = Isolation.REPEATABLE_READ)
     public ExpenseLimitPageResponse getAll(String account, int page, int size) {

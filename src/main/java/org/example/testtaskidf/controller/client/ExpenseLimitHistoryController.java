@@ -3,6 +3,7 @@ package org.example.testtaskidf.controller.client;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.ExampleObject;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -31,11 +32,13 @@ public class ExpenseLimitHistoryController {
 
     /**
      * Reads both categories, including user-established zero amounts and implicit defaults.
+     * Defaults have no persisted UUID; their timestamps are month starts at fixed UTC+03:00.
+     * This read neither establishes limits nor registers unknown accounts.
      *
      * @param account existing ten-digit source account
      * @param page zero-based page number
      * @param size page size between 1 and 100, default 20
-     * @return newest-first history page
+     * @return newest-first history page; beyond the last page content is empty and totals are retained
      */
     @GetMapping
     @Operation(summary = "Get all account limits",
@@ -44,11 +47,23 @@ public class ExpenseLimitHistoryController {
                     + "the registration month and operation months where no user limit was yet active. "
                     + "No rows are created on reading, no unused intervening months are generated, and user limits "
                     + "carry into subsequent months. Sort: established_at DESC, revision DESC, expense_category ASC. "
-                    + "Pages start at zero; default size is 20, maximum 100. A page beyond the history is empty.",
+                    + "Pages start at zero; default size is 20, maximum 100. A page beyond the history is empty. "
+                    + "Totals and content share one database snapshot. Separate page requests may shift after writes. "
+                    + "GET never registers accounts; all errors use RFC 9457 application/problem+json.",
             responses = {
                 @ApiResponse(responseCode = "200", description = "Account history page",
                         content = @Content(mediaType = "application/json",
-                                schema = @Schema(implementation = ExpenseLimitPageResponse.class))),
+                                schema = @Schema(implementation = ExpenseLimitPageResponse.class),
+                                examples = @ExampleObject(name = "New account defaults", value = """
+                                        {"content":[
+                                          {"id":null,"account":"0000000123","expense_category":"product",
+                                           "amount":1000.00,"currency":"USD",
+                                           "established_at":"2022-01-01T00:00:00+03:00"},
+                                          {"id":null,"account":"0000000123","expense_category":"service",
+                                           "amount":1000.00,"currency":"USD",
+                                           "established_at":"2022-01-01T00:00:00+03:00"}],
+                                         "page":0,"size":20,"total_elements":2,"total_pages":1}
+                                        """))),
                 @ApiResponse(responseCode = "400", description = "Invalid account or pagination parameters",
                         content = @Content(mediaType = "application/problem+json",
                                 schema = @Schema(implementation = ProblemDetail.class))),
@@ -64,11 +79,13 @@ public class ExpenseLimitHistoryController {
             })
     public ExpenseLimitPageResponse getAll(
             @Parameter(description = "Existing source account", example = "0000000123",
-                    schema = @Schema(pattern = "[0-9]{10}"))
+                    schema = @Schema(pattern = "[0-9]{10}", minLength = 10, maxLength = 10))
             @PathVariable @Pattern(regexp = "[0-9]{10}") String account,
-            @Parameter(schema = @Schema(minimum = "0", defaultValue = "0"))
+            @Parameter(description = "Zero-based page number",
+                    schema = @Schema(minimum = "0", maximum = "2147483647", defaultValue = "0"))
             @RequestParam(defaultValue = "0") @Min(0) int page,
-            @Parameter(schema = @Schema(minimum = "1", maximum = "100", defaultValue = "20"))
+            @Parameter(description = "Number of entries per page, from 1 to 100",
+                    schema = @Schema(minimum = "1", maximum = "100", defaultValue = "20"))
             @RequestParam(defaultValue = "20") @Min(1) @Max(100) int size) {
         return service.getAll(account, page, size);
     }

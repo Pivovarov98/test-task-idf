@@ -22,7 +22,13 @@ public class LimitExceededTransactionRepository {
         this.jdbc = jdbc;
     }
 
-    /** Returns a count with exactly the same eligibility predicate as page retrieval. */
+    /**
+     * Counts only successful operations with a completed check and a true exceeded flag.
+     * Uses exactly the same eligibility predicate as page retrieval.
+     *
+     * @param account source account
+     * @return total eligible operations, excluding failed and timed-out operations even with true flags
+     */
     public long count(String account) {
         return Objects.requireNonNull(jdbc.queryForObject("SELECT COUNT(*) " + ELIGIBLE, Long.class, account));
     }
@@ -30,6 +36,7 @@ public class LimitExceededTransactionRepository {
     /**
      * Paginates before joining limits; applied_limit_usd retains the reservation-time amount.
      * An implicit default uses the operation's Moscow month start, including after late bank success.
+     * The caller owns the read transaction. Saved amounts, rates and flags are never recalculated.
      *
      * @param account source account
      * @param offset nonnegative row offset

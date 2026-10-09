@@ -21,7 +21,7 @@ import org.springframework.web.bind.annotation.RestController;
  * Client API for establishing a new limit without changing historical limits.
  */
 @RestController
-@Tag(name = "Limits", description = "Establish account expense limits in USD")
+@Tag(name = "Limits", description = "Establish limits and read account history in USD")
 @RequestMapping("/api/v1/client/limits")
 public class ExpenseLimitController {
     private final ClientLimitService service;
