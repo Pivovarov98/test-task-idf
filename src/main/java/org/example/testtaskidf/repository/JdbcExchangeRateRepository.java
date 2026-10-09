@@ -41,6 +41,22 @@ public class JdbcExchangeRateRepository implements ExchangeRateRepository {
                 """, date, now.atOffset(java.time.ZoneOffset.UTC), date);
     }
 
+    @Override
+    public Optional<StoredExchangeRate> findPreviousRate(LocalDate date, String currency) {
+        return jdbc.query("""
+                SELECT r.id, r.units_per_usd FROM exchange_rates r JOIN exchange_rate_snapshots s
+                    ON s.requested_date = r.requested_date
+                WHERE r.base_currency = ? AND s.rate_date <= ? AND s.requested_date <= ?
+                ORDER BY s.rate_date DESC, s.requested_date DESC LIMIT 1
+                """, (row, index) -> new StoredExchangeRate(row.getObject("id", UUID.class),
+                row.getBigDecimal("units_per_usd")), currency, date, date).stream().findFirst();
+    }
+
+    @Override
+    public LocalDate conversionDate(UUID id) {
+        return jdbc.queryForObject("SELECT conversion_rate_date FROM transactions WHERE id = ?", LocalDate.class, id);
+    }
+
     public Optional<LocalDate> claim(Instant now) {
         return jdbc.query("""
                 UPDATE exchange_rate_jobs SET lease_until = ?, attempts = attempts + 1

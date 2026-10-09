@@ -36,5 +36,6 @@ public record TransactionResponse(
         @Schema(allowableValues = {"PENDING", "COMPLETED", "UNSUPPORTED_CURRENCY"})
         @JsonProperty("conversion_status") String conversionStatus,
         @Schema(description = "Saved quote used for conversion; absent for USD or pending calculations")
-        @JsonProperty("exchange_rate_id") UUID exchangeRateId) {
+        @JsonProperty("exchange_rate_id") UUID exchangeRateId,
+        @com.fasterxml.jackson.annotation.JsonUnwrapped OperationState operation) {
 }

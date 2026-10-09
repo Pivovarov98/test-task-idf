@@ -38,12 +38,17 @@ public class TransactionController {
             description = "Creates a new transaction on each call. The server generates id and received_at. "
                     + "Rates are read from the local database. Missing rates leave conversion_status=PENDING; "
                     + "background processing completes the USD amount. No external HTTP call is made during receipt. "
+                    + "USD reserves count immediately; limit_exceeded is finalized on bank notification or timeout. "
+                    + "Late operations before calculated reserves are rejected with 409. "
                     + "The operation is not idempotent; repeated requests create separate records.",
             responses = {
                 @ApiResponse(responseCode = "201", description = "Transaction saved",
                         content = @Content(mediaType = "application/json",
                                 schema = @Schema(implementation = TransactionResponse.class))),
                 @ApiResponse(responseCode = "400", description = "Invalid JSON, field format or transaction data",
+                        content = @Content(mediaType = "application/problem+json",
+                                schema = @Schema(implementation = ProblemDetail.class))),
+                @ApiResponse(responseCode = "409", description = "Operation precedes a calculated reserve",
                         content = @Content(mediaType = "application/problem+json",
                                 schema = @Schema(implementation = ProblemDetail.class))),
                 @ApiResponse(responseCode = "503", description = "Transaction could not be saved",

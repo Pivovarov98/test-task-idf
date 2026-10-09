@@ -15,13 +15,21 @@ public final class ExchangeRateUtils {
     }
 
     public static LocalDate lastClosedDate(Instant now) {
-        return now.atOffset(ZoneOffset.UTC).toLocalDate().minusDays(1);
+        return previousWeekday(now.atOffset(ZoneOffset.UTC).toLocalDate().minusDays(1));
     }
 
     public static LocalDate targetDate(Instant occurredAt, Instant now) {
         var date = occurredAt.atOffset(ZoneOffset.UTC).toLocalDate();
         var closed = lastClosedDate(now);
-        return date.isAfter(closed) ? closed : date;
+        return date.isAfter(closed) ? closed : previousWeekday(date);
+    }
+
+    private static LocalDate previousWeekday(LocalDate date) {
+        var result = date;
+        while (result.getDayOfWeek().getValue() > 5) {
+            result = result.minusDays(1);
+        }
+        return result;
     }
 
     public static BigDecimal toUsd(BigDecimal amount, BigDecimal unitsPerUsd) {

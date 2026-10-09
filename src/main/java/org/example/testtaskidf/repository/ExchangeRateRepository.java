@@ -16,6 +16,8 @@ public interface ExchangeRateRepository {
     boolean hasSnapshot(LocalDate date);
 
     Optional<StoredExchangeRate> findRate(LocalDate date, String currency);
+    Optional<StoredExchangeRate> findPreviousRate(LocalDate date, String currency);
+    LocalDate conversionDate(UUID id);
 
     void enqueue(LocalDate date, Instant now);
 

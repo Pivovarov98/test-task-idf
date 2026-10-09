@@ -12,19 +12,22 @@ public class BankTransactionService {
     private final TransactionService transactions;
     private final CurrencyConversionService conversions;
     private final TransactionMapper mapper;
+    private final OperationLifecycleService lifecycle;
 
     public BankTransactionService(TransactionService transactions, CurrencyConversionService conversions,
-            TransactionMapper mapper) {
+            TransactionMapper mapper, OperationLifecycleService lifecycle) {
         this.transactions = transactions;
         this.conversions = conversions;
         this.mapper = mapper;
+        this.lifecycle = lifecycle;
     }
 
     @Transactional
     public TransactionResponse receive(TransactionRequest request) {
+        lifecycle.checkCreation(request);
         var response = transactions.receive(request);
         var conversion = conversions.convert(response.id(), response.currencyShortname(), response.sum(),
                 response.datetime().toInstant());
-        return mapper.withConversion(response, conversion);
+        return mapper.withOperation(mapper.withConversion(response, conversion), lifecycle.created(response.id()));
     }
 }
