@@ -182,13 +182,43 @@ Bean Validation, Spring JDBC, PostgreSQL 17,
 Flyway, MapStruct, springdoc-openapi / Swagger UI.
 Тесты: JUnit 5, Mockito, AssertJ, Testcontainers, ArchUnit.
 
+## Запуск всего сервиса в Docker
+
+Нужен только Docker с Docker Compose. Из корня репозитория:
+
+```sh
+docker compose up --build -d --wait
+```
+
+`docker-compose.yml` собирает приложение через multi-stage `Dockerfile` (JDK 21
+для сборки, JRE 21 для запуска) и поднимает PostgreSQL 17. Приложение работает
+от непривилегированного пользователя, ждёт готовности БД и применяет миграции Flyway.
+Команда завершается успешно после прохождения healthcheck обоих контейнеров.
+Swagger UI: http://localhost:8080/swagger-ui/index.html.
+
+Порты хоста можно изменить через `APP_PORT` (по умолчанию 8080) и `DB_PORT`
+(5432). Внутри Docker приложение подключается к `postgres:5432` независимо
+от порта хоста. Необязательный `OPEN_EXCHANGE_RATES_APP_ID` передаётся из окружения;
+без него получение новых внешних курсов недоступно, операции в USD работают.
+`DB_USERNAME` и `DB_PASSWORD` применяются к обоим контейнерам; смена этих переменных
+не меняет учётные данные уже созданной БД в volume.
+
+```sh
+docker compose ps
+docker compose logs -f app
+docker compose down
+```
+
+`down` сохраняет данные в volume `postgres_data`. Команда `docker compose down -v`
+удаляет и контейнеры, и данные БД — используйте её только для намеренного сброса.
+
 ## Локальный запуск
 
 Нужны JDK 21 и Docker с Docker Compose. Maven устанавливать отдельно не нужно — есть Maven Wrapper.
 Из корня проекта запустите БД, затем приложение:
 
 ```powershell
-docker compose up -d --wait
+docker compose up -d --wait postgres
 ./mvnw.cmd spring-boot:run
 ```
 
@@ -200,7 +230,7 @@ Flyway автоматически создаёт таблицу и примен�
 ```powershell
 $env:DB_PORT = '15432'
 $env:DB_URL = 'jdbc:postgresql://localhost:15432/test_task_idf'
-docker compose up -d --wait
+docker compose up -d --wait postgres
 ./mvnw.cmd spring-boot:run
 ```
 
