@@ -6,6 +6,7 @@ import java.util.UUID;
 import org.example.testtaskidf.dto.ExpenseLimitRequest;
 import org.example.testtaskidf.dto.ExpenseLimitResponse;
 import org.example.testtaskidf.model.ExpenseLimit;
+import org.example.testtaskidf.model.ExpenseLimitHistoryEntry;
 import org.example.testtaskidf.util.ExpenseCategoryUtils;
 import org.example.testtaskidf.util.BusinessTimeUtils;
 import org.mapstruct.Context;
@@ -23,4 +24,12 @@ public interface ExpenseLimitMapper {
     ExpenseLimit toEntity(ExpenseLimitRequest request, @Context UUID id, @Context Instant establishedAt);
 
     ExpenseLimitResponse toResponse(ExpenseLimit limit);
+
+    /**
+     * Maps user or implicit default history without inventing an identifier for a default.
+     *
+     * @param limit historical projection, or null
+     * @return response with UTC+03:00 timestamp and nullable default ID, or null for a null projection
+     */
+    ExpenseLimitResponse toResponse(ExpenseLimitHistoryEntry limit);
 }

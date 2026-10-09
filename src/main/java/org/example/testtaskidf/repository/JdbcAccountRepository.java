@@ -22,4 +22,10 @@ public class JdbcAccountRepository implements AccountRepository {
                 ON CONFLICT (account_number) DO NOTHING
                 """, account, createdAt.atOffset(ZoneOffset.UTC));
     }
+
+    @Override
+    public boolean exists(String account) {
+        return Boolean.TRUE.equals(jdbcTemplate.queryForObject(
+                "SELECT EXISTS(SELECT 1 FROM accounts WHERE account_number = ?)", Boolean.class, account));
+    }
 }

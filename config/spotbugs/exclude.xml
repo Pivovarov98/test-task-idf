@@ -42,4 +42,16 @@
         <Method name="&lt;init&gt;"/>
         <Bug pattern="EI_EXPOSE_REP2"/>
     </Match>
+    <!-- JdbcTemplate is a Spring-managed collaborator, not an owned mutable value. -->
+    <Match>
+        <Class name="org.example.testtaskidf.repository.ExpenseLimitHistoryRepository"/>
+        <Method name="&lt;init&gt;"/>
+        <Bug pattern="EI_EXPOSE_REP2"/>
+    </Match>
+    <!-- JdbcTemplate is a Spring-managed collaborator, not an owned mutable value. -->
+    <Match>
+        <Class name="org.example.testtaskidf.repository.LimitExceededTransactionRepository"/>
+        <Method name="&lt;init&gt;"/>
+        <Bug pattern="EI_EXPOSE_REP2"/>
+    </Match>
 </FindBugsFilter>
