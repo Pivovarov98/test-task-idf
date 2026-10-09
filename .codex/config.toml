@@ -1,0 +1,5 @@
+# Project-scoped MCP: current documentation for Spring and other libraries.
+[mcp_servers.context7]
+url = "https://mcp.context7.com/mcp"
+# Optional API key; only the environment variable name is stored in Git.
+env_http_headers = { CONTEXT7_API_KEY = "CONTEXT7_API_KEY" }
