@@ -1,0 +1,39 @@
+services:
+  app:
+    build: .
+    environment:
+      DB_URL: jdbc:postgresql://postgres:5432/test_task_idf
+      DB_USERNAME: ${DB_USERNAME:-test_task_idf}
+      DB_PASSWORD: ${DB_PASSWORD:-test_task_idf}
+      SERVER_PORT: 8080
+      OPEN_EXCHANGE_RATES_APP_ID: ${OPEN_EXCHANGE_RATES_APP_ID:-}
+    ports:
+      - "127.0.0.1:${APP_PORT:-8080}:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "--fail", "--silent", "http://localhost:8080/v3/api-docs"]
+      interval: 10s
+      timeout: 5s
+      start_period: 60s
+      retries: 12
+
+  postgres:
+    image: postgres:17
+    environment:
+      POSTGRES_DB: test_task_idf
+      POSTGRES_USER: ${DB_USERNAME:-test_task_idf}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-test_task_idf}
+    ports:
+      - "127.0.0.1:${DB_PORT:-5432}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U \"$$POSTGRES_USER\" -d \"$$POSTGRES_DB\""]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  postgres_data:
