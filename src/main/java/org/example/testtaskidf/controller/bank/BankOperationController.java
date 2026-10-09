@@ -28,7 +28,8 @@ import org.springframework.web.bind.annotation.RestController;
 @Tag(name = "Operation lifecycle", description = "Bank completion, reservation state and local polling simulator")
 @ApiResponses({
     @ApiResponse(responseCode = "200", description = "Persisted operation state",
-            content = @Content(mediaType = "application/json", schema = @Schema(implementation = OperationState.class))),
+            content = @Content(mediaType = "application/json",
+                    schema = @Schema(implementation = OperationState.class))),
     @ApiResponse(responseCode = "400", description = "Invalid JSON, UUID, status or completion time",
             content = @Content(mediaType = "application/problem+json",
                     schema = @Schema(implementation = ProblemDetail.class))),

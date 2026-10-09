@@ -9,7 +9,11 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
-/** Durable operations are recovered from PostgreSQL after every restart. */
+/**
+ * Recovers durable reservations and due bank polls from PostgreSQL, including after application restart.
+ * Each lifecycle call has its own transaction and account/category lock. Temporary failures are logged
+ * and retried on later runs; the configured switch disables the worker in tests.
+ */
 @Service
 public class OperationSchedulerService {
     private static final Logger LOGGER = LoggerFactory.getLogger(OperationSchedulerService.class);
@@ -26,6 +30,7 @@ public class OperationSchedulerService {
         this.enabled = enabled;
     }
 
+    /** Reconciles converted operations, then processes due polls using the injected Clock. */
     @Scheduled(fixedDelayString = "${bank.worker-delay-ms}", initialDelay = 10000)
     public void process() {
         if (!enabled) {

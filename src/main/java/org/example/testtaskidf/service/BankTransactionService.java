@@ -6,7 +6,10 @@ import org.example.testtaskidf.service.mapping.TransactionMapper;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-/** Reception and cache-only conversion share an atomic database transaction. */
+/**
+ * Persists reception, cache-only conversion and reservation atomically under the account/category lock.
+ * Account registration commits separately. Receipt never performs a synchronous external rate request.
+ */
 @Service
 public class BankTransactionService {
     private final TransactionService transactions;
@@ -22,6 +25,13 @@ public class BankTransactionService {
         this.lifecycle = lifecycle;
     }
 
+    /**
+     * Receives a validated bank operation and reserves its fixed USD amount when conversion and order permit.
+     * Each call creates a distinct record; the acknowledgment leaves bank completion in PROCESSING.
+     *
+     * @param request validated transaction data with creation time and offset
+     * @return saved transaction with conversion and lifecycle state
+     */
     @Transactional
     public TransactionResponse receive(TransactionRequest request) {
         lifecycle.checkCreation(request);

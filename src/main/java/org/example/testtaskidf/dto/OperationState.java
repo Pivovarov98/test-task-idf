@@ -28,7 +28,8 @@ public record OperationState(
         @JsonProperty("completed_at") OffsetDateTime completedAt,
         @Schema(description = "False while pending. On success: occupied USD plus this reserve exceeds the "
                 + "historical limit. On failure or timeout: true only if it was already exceeded before this reserve. "
-                + "Exact equality does not exceed a limit; later limit changes do not rewrite the flag.", example = "false")
+                + "Exact equality does not exceed a limit; later limit changes do not rewrite the flag.",
+                example = "false")
         @JsonProperty("limit_exceeded") boolean limitExceeded,
         @Schema(description = "Success with unavailable conversion remains PENDING until reservation is calculated",
                 allowableValues = {"PENDING", "COMPLETED"}, example = "PENDING")

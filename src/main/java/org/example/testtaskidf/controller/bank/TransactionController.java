@@ -37,13 +37,18 @@ public class TransactionController {
      */
     @Operation(summary = "Receive a bank transaction",
             description = "Creates a new transaction on each call. The server generates id and received_at. "
-                    + "Rates use the creation date in UTC, capped to the last closed weekday at receipt. The last available cached close is used if the target date is missing. No usable rate leaves conversion_status=PENDING; "
+                    + "Rates use the creation date in UTC, capped to the last closed weekday at receipt. "
+                    + "The last available cached close is used if the target date is missing. "
+                    + "No usable rate leaves conversion_status=PENDING; "
                     + "background processing completes the USD amount. No external HTTP call is made during receipt. "
-                    + "Converted amounts reserve the creation month in Europe/Moscow (UTC+03:00), unless an earlier unconverted operation blocks reservation. Amounts are fixed once calculated. limit_exceeded remains false while checking is pending and is finalized on completion or timeout. "
+                    + "Converted amounts reserve the creation month in Europe/Moscow (UTC+03:00), "
+                    + "unless an earlier unconverted operation blocks reservation. Amounts are fixed once calculated. "
+                    + "limit_exceeded remains false while checking is pending; completion or timeout finalizes it. "
                     + "Late operations before calculated reserves are rejected with 409. "
                     + "The operation is not idempotent; repeated requests create separate records.",
             responses = {
-                @ApiResponse(responseCode = "201", description = "Transaction persisted; bank completion can still be pending",
+                @ApiResponse(responseCode = "201",
+                        description = "Transaction persisted; bank completion can still be pending",
                         content = @Content(mediaType = "application/json",
                                 schema = @Schema(implementation = TransactionResponse.class))),
                 @ApiResponse(responseCode = "400", description = "Invalid JSON, field format or transaction data",
@@ -65,4 +70,3 @@ public class TransactionController {
         return service.receive(request);
     }
 }
-

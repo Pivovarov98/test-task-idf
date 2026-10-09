@@ -22,6 +22,7 @@ public class OperationRepository {
         this.jdbc = jdbc;
     }
 
+    /** Reads the immutable operation projection; an unknown UUID returns an empty Optional. */
     public Optional<ReservableOperation> find(UUID id) {
         return jdbc.query("SELECT * FROM transactions WHERE id = ?", (row, index) -> new ReservableOperation(
                 row.getObject("id", UUID.class), row.getString("account_from"),
@@ -34,15 +35,18 @@ public class OperationRepository {
                 (Boolean) row.getObject("already_exceeded_before")), id).stream().findFirst();
     }
 
+    /** Acquires the transaction-scoped account/category advisory lock; the caller must own a transaction. */
     public void lock(ReservableOperation operation) {
         lock(operation.account(), operation.category());
     }
 
+    /** Acquires the transaction-scoped account/category advisory lock; the caller must own a transaction. */
     public void lock(String account, org.example.testtaskidf.model.ExpenseCategory category) {
         jdbc.queryForObject("SELECT pg_advisory_xact_lock(?)", Object.class,
                 org.example.testtaskidf.util.AccountLockUtils.key(account, category));
     }
 
+    /** Checks for a later calculated reserve in the same month; equal creation instants are allowed. */
     public boolean isLate(String account, String category, Instant createdAt, MonthPeriod month) {
         return Boolean.TRUE.equals(jdbc.queryForObject("""
                 SELECT EXISTS(SELECT 1 FROM transactions WHERE account_from = ? AND expense_category = ?
@@ -52,6 +56,7 @@ public class OperationRepository {
                 month.endExclusive().atOffset(java.time.ZoneOffset.UTC)));
     }
 
+    /** Lists PROCESSING or SUCCEEDED operations awaiting a reserve, ordered by creation and sequence. */
     public List<UUID> unreserved(ReservableOperation operation, MonthPeriod month) {
         return jdbc.query("""
                 SELECT id FROM transactions WHERE account_from = ? AND expense_category = ?
@@ -63,6 +68,7 @@ public class OperationRepository {
                 month.endExclusive().atOffset(java.time.ZoneOffset.UTC));
     }
 
+    /** Sums active processing reserves and successful expenses within the supplied accounting month. */
     public BigDecimal occupied(ReservableOperation operation, MonthPeriod month) {
         return jdbc.queryForObject("""
                 SELECT COALESCE(SUM(reserved_usd), 0) FROM transactions WHERE account_from = ? AND expense_category = ?
@@ -73,6 +79,7 @@ public class OperationRepository {
                 month.endExclusive().atOffset(java.time.ZoneOffset.UTC));
     }
 
+    /** Fixes the USD amount, historical limit and flags once; finalizes the flag if success was already received. */
     public void reserve(UUID id, BigDecimal amount, BigDecimal limit, UUID limitId, boolean exceeded, boolean before) {
         jdbc.update("""
                 UPDATE transactions SET reserved_usd = ?, reservation_active = TRUE, applied_limit_usd = ?,
@@ -84,6 +91,7 @@ public class OperationRepository {
                 """, amount, limit, limitId, exceeded, before, exceeded, id);
     }
 
+    /** Persists completion; success retains or restores the original reserve, failure or timeout releases it. */
     public void finish(ReservableOperation operation, BankOperationStatus status, Instant completedAt) {
         boolean succeeded = status == BankOperationStatus.SUCCEEDED;
         boolean flag = succeeded ? Boolean.TRUE.equals(operation.exceeded())
@@ -97,6 +105,7 @@ public class OperationRepository {
                 succeeded && operation.reservedUsd() != null, operation.id());
     }
 
+    /** Reads the public lifecycle fields; the caller must first establish that the operation exists. */
     public OperationState state(UUID id) {
         return jdbc.queryForObject("SELECT * FROM transactions WHERE id = ?", (row, index) -> new OperationState(
                 row.getString("operation_status"), row.getObject("completed_at", java.time.OffsetDateTime.class),
@@ -105,15 +114,18 @@ public class OperationRepository {
                 row.getBoolean("reservation_active")), id);
     }
 
+    /** Writes or reads the durable simulator reply; does not itself finalize the operation. */
     public void stub(UUID id, BankOperationStatus status) {
         jdbc.update("UPDATE transactions SET bank_stub_status = ? WHERE id = ?", status.name(), id);
     }
 
+    /** Writes or reads the durable simulator reply; does not itself finalize the operation. */
     public BankOperationStatus stub(UUID id) {
         return BankOperationStatus.valueOf(jdbc.queryForObject(
                 "SELECT bank_stub_status FROM transactions WHERE id = ?", String.class, id));
     }
 
+    /** Returns up to 100 PROCESSING operations whose persisted polling deadline has passed. */
     public List<UUID> due(Instant now) {
         return jdbc.query("""
                 SELECT id FROM transactions WHERE operation_status = 'PROCESSING' AND next_bank_poll_at <= ?
@@ -121,6 +133,7 @@ public class OperationRepository {
                 """, (row, index) -> row.getObject("id", UUID.class), now.atOffset(java.time.ZoneOffset.UTC));
     }
 
+    /** Stores the next poll and continuous-error start; null clears the unavailability timer. */
     public void poll(UUID id, Instant next, Instant unavailableSince) {
         jdbc.update("""
                 UPDATE transactions SET next_bank_poll_at = ?, bank_unavailable_since = ? WHERE id = ?
@@ -128,6 +141,7 @@ public class OperationRepository {
                 unavailableSince == null ? null : unavailableSince.atOffset(java.time.ZoneOffset.UTC), id);
     }
 
+    /** Returns up to 100 converted PROCESSING or SUCCEEDED operations with no fixed USD reserve. */
     public List<UUID> needsReservation() {
         return jdbc.query("""
                 SELECT id FROM transactions WHERE reserved_usd IS NULL AND conversion_status = 'COMPLETED'

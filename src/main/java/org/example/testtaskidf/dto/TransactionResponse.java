@@ -37,7 +37,8 @@ public record TransactionResponse(
                 example = "2022-01-30T00:00:00+06:00") OffsetDateTime datetime,
         @Schema(description = "Server receipt time in UTC", example = "2026-10-07T12:00:00Z")
         @JsonProperty("received_at") OffsetDateTime receivedAt,
-        @Schema(description = "Fixed USD amount, never recalculated on completion; null while pending or unsupported", example = "20.50")
+        @Schema(description = "Fixed USD amount, never recalculated on completion; null while pending or unsupported",
+                example = "20.50")
         @JsonProperty("amount_usd") BigDecimal amountUsd,
         @Schema(allowableValues = {"PENDING", "COMPLETED", "UNSUPPORTED_CURRENCY"})
         @JsonProperty("conversion_status") String conversionStatus,
@@ -45,4 +46,3 @@ public record TransactionResponse(
         @JsonProperty("exchange_rate_id") UUID exchangeRateId,
         @com.fasterxml.jackson.annotation.JsonUnwrapped OperationState operation) {
 }
-

@@ -54,6 +54,13 @@ public class OperationLifecycleService {
         }
     }
 
+    /**
+     * Reads the persisted state without polling the bank or recomputing a reservation.
+     *
+     * @param id saved transaction identifier
+     * @return lifecycle state
+     * @throws ResponseStatusException if the transaction does not exist (404)
+     */
     @Transactional(readOnly = true)
     public OperationState state(UUID id) {
         if (repository.find(id).isEmpty()) {
@@ -62,6 +69,13 @@ public class OperationLifecycleService {
         return repository.state(id);
     }
 
+    /**
+     * Locks the account/category and rejects creation before a calculated reserve in the same month.
+     * The enclosing reception transaction retains the lock through insertion and reservation.
+     *
+     * @param request validated incoming transaction
+     * @throws ResponseStatusException for a backdated operation that changes reservation order (409)
+     */
     @Transactional
     public void checkCreation(TransactionRequest request) {
         var category = ExpenseCategoryUtils.fromCode(request.expenseCategory());
@@ -73,6 +87,13 @@ public class OperationLifecycleService {
         }
     }
 
+    /**
+     * Schedules the first poll and reserves converted operations in creation order within the month.
+     *
+     * @param id newly persisted transaction identifier
+     * @return state after any currently possible reservations
+     * @throws ResponseStatusException if the transaction does not exist (404)
+     */
     @Transactional
     public OperationState created(UUID id) {
         var operation = locked(id);
@@ -81,6 +102,12 @@ public class OperationLifecycleService {
         return repository.state(id);
     }
 
+    /**
+     * Retries month reservations after conversion becomes available; existing reserves remain unchanged.
+     *
+     * @param id transaction identifying the account/category/month to reconcile
+     * @throws ResponseStatusException if the transaction does not exist (404)
+     */
     @Transactional
     public void reconcile(UUID id) {
         reserveMonth(locked(id));
@@ -102,6 +129,17 @@ public class OperationLifecycleService {
         }
     }
 
+    /**
+     * Applies a validated final notification. Same-status duplicates retain the original completion time.
+     * PROCESSING and TIMED_OUT accept final statuses; other conflicting final statuses are rejected.
+     * Success uses exceedance fixed at reservation; failure uses whether the limit was already exceeded
+     * before reservation. Success without a USD amount remains pending until reconciliation.
+     *
+     * @param request bank final status and completion time
+     * @return persisted final or pending-check state
+     * @throws ResponseStatusException for an unknown operation (404), conflicting final status (409),
+     *                                or completion before creation (400)
+     */
     @Transactional
     public OperationState notify(BankNotificationRequest request) {
         var operation = locked(request.transactionId());
@@ -121,6 +159,14 @@ public class OperationLifecycleService {
         return repository.state(operation.id());
     }
 
+    /**
+     * Stores a local simulator reply for later polls without immediately changing lifecycle status.
+     *
+     * @param id saved transaction identifier
+     * @param status validated PROCESSING, SUCCEEDED, FAILED or ERROR reply
+     * @return current lifecycle state
+     * @throws ResponseStatusException if the transaction does not exist (404)
+     */
     @Transactional
     public OperationState configureStub(UUID id, String status) {
         locked(id);
@@ -128,6 +174,15 @@ public class OperationLifecycleService {
         return repository.state(id);
     }
 
+    /**
+     * Polls the local simulator for a PROCESSING operation under the account/category lock.
+     * The first ERROR starts the unavailability period; further errors preserve its start. PROCESSING
+     * clears it. At the configured timeout a failing poll releases the reserve and sets TIMED_OUT.
+     * Final bank replies use Clock as completion time. Finalized operations are ignored.
+     *
+     * @param id saved transaction identifier
+     * @throws ResponseStatusException if the transaction does not exist (404)
+     */
     @Transactional
     public void poll(UUID id) {
         var operation = locked(id);
@@ -162,4 +217,3 @@ public class OperationLifecycleService {
         return repository.find(id).orElseThrow();
     }
 }
-
