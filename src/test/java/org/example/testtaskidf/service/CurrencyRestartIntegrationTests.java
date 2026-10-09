@@ -42,6 +42,9 @@ class CurrencyRestartIntegrationTests {
                         OffsetDateTime.parse("2026-10-08T01:00:00+03:00")));
                 id = response.id();
                 assertThat(response.conversionStatus()).isEqualTo("PENDING");
+                var lifecycle = first.getBean(OperationLifecycleService.class);
+                lifecycle.configureStub(id, "ERROR");
+                lifecycle.poll(id);
                 assertThat(first.getBean(ExchangeRateRepository.class).claim(NOW)).contains(DATE);
             }
             try (var second = application(postgres)) {
@@ -49,6 +52,8 @@ class CurrencyRestartIntegrationTests {
                 var repository = second.getBean(ExchangeRateRepository.class);
                 assertThat(jdbc.queryForObject("SELECT conversion_status FROM transactions WHERE id = ?",
                         String.class, id)).isEqualTo("PENDING");
+                assertThat(jdbc.queryForObject("SELECT bank_unavailable_since FROM transactions WHERE id = ?",
+                        OffsetDateTime.class, id).toInstant()).isEqualTo(NOW);
                 assertThat(repository.claim(NOW.plusSeconds(59))).isEmpty();
                 assertThat(repository.claim(NOW.plusSeconds(61))).contains(DATE);
                 second.getBean(ExchangeRateStorageService.class).save(DATE, new ExchangeRatePayload("USD",
@@ -63,6 +68,23 @@ class CurrencyRestartIntegrationTests {
                         BigDecimal.class, id)).isEqualByComparingTo("2.00");
                 assertThat(jdbc.queryForObject("SELECT conversion_status FROM transactions WHERE id = ?",
                         String.class, id)).isEqualTo("COMPLETED");
+                var lifecycle = second.getBean(OperationLifecycleService.class);
+                lifecycle.reconcile(id);
+                assertThat(lifecycle.state(id).reservedUsd()).isEqualByComparingTo("2.00");
+                var afterTimeout = new OperationLifecycleService(
+                        second.getBean(org.example.testtaskidf.repository.OperationRepository.class),
+                        second.getBean(ExpenseLimitService.class),
+                        Clock.fixed(NOW.plusSeconds(10800), ZoneOffset.UTC),
+                        java.time.Duration.ofHours(3), java.time.Duration.ofMinutes(15));
+                new org.springframework.transaction.support.TransactionTemplate(
+                        second.getBean(org.springframework.transaction.PlatformTransactionManager.class))
+                        .executeWithoutResult(tx -> afterTimeout.poll(id));
+                assertThat(lifecycle.state(id).operationStatus()).isEqualTo("TIMED_OUT");
+                assertThat(lifecycle.state(id).reservationActive()).isFalse();
+                lifecycle.notify(new org.example.testtaskidf.dto.BankNotificationRequest(id, "SUCCEEDED",
+                        NOW.plusSeconds(10801).atOffset(ZoneOffset.UTC)));
+                assertThat(lifecycle.state(id).reservedUsd()).isEqualByComparingTo("2.00");
+                assertThat(lifecycle.state(id).reservationActive()).isTrue();
                 assertThat(jdbc.queryForObject("SELECT count(*) FROM transactions", Long.class)).isEqualTo(1L);
             }
         }

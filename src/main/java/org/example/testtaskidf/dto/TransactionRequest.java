@@ -19,7 +19,7 @@ import org.example.testtaskidf.config.validation.CurrencyCode;
  * @param currencyShortname ISO 4217 currency accepted by the Java runtime
  * @param sum positive amount with at most seventeen integer and two fractional digits
  * @param expenseCategory category code: product or service
- * @param datetime occurrence time with an explicit UTC offset
+ * @param datetime creation time with an offset; accounting month uses Moscow, exchange-rate date uses UTC
  */
 @Schema(description = "Incoming transaction; all fields are required")
 public record TransactionRequest(
@@ -35,7 +35,7 @@ public record TransactionRequest(
         @NotNull @DecimalMin(value = "0", inclusive = false) @Digits(integer = 17, fraction = 2) BigDecimal sum,
         @Schema(description = "Expense category", example = "product", allowableValues = {"product", "service"})
         @JsonProperty("expense_category") @NotNull @Pattern(regexp = "product|service") String expenseCategory,
-        @Schema(description = "Occurrence time; timezone offset is mandatory",
+        @Schema(description = "Creation time with offset; accounting month uses Moscow (UTC+03:00), rate date uses UTC",
                 example = "2022-01-30T00:00:00+06:00", type = "string", format = "date-time")
         @NotNull OffsetDateTime datetime) {
 }

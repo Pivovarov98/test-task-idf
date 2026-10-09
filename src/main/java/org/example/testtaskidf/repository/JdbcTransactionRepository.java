@@ -20,11 +20,13 @@ public class JdbcTransactionRepository implements TransactionRepository {
         jdbcTemplate.update("""
                 INSERT INTO transactions
                     (id, account_from, account_to, currency_shortname, sum, expense_category, datetime, received_at,
-                    conversion_next_attempt_at)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    conversion_next_attempt_at, conversion_rate_date)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """, transaction.id(), transaction.accountFrom(), transaction.accountTo(),
                 transaction.currencyShortname(), transaction.sum(),
                 ExpenseCategoryUtils.toCode(transaction.expenseCategory()),
-                transaction.datetime(), transaction.receivedAt(), transaction.receivedAt());
+                transaction.datetime(), transaction.receivedAt(), transaction.receivedAt(),
+                org.example.testtaskidf.util.ExchangeRateUtils.targetDate(transaction.datetime().toInstant(),
+                        transaction.receivedAt().toInstant()));
     }
 }

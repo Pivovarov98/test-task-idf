@@ -28,9 +28,15 @@ class ExchangeRateUtilsTests {
         assertThat(ExchangeRateUtils.targetDate(Instant.parse("2026-10-08T12:00:00Z"), now))
                 .isEqualTo(LocalDate.parse("2026-10-07"));
         assertThat(ExchangeRateUtils.targetDate(Instant.parse("2022-01-01T12:00:00Z"), now))
-                .isEqualTo(LocalDate.parse("2022-01-01"));
+                .isEqualTo(LocalDate.parse("2021-12-31"));
     }
 
+    @ParameterizedTest
+    @CsvSource({"2026-10-10T06:00:00Z,2026-10-09", "2026-10-11T06:00:00Z,2026-10-09",
+        "2026-10-12T06:00:00Z,2026-10-09", "2026-10-13T06:00:00Z,2026-10-12"})
+    void usesLastClosedWeekdayAcrossWeekend(String now, String expected) {
+        assertThat(ExchangeRateUtils.lastClosedDate(Instant.parse(now))).isEqualTo(LocalDate.parse(expected));
+    }
     @Test
     void supportsRetryAfterSecondsHttpDatesAndInvalidHeaders() {
         var now = Instant.parse("2026-10-08T06:00:00Z");

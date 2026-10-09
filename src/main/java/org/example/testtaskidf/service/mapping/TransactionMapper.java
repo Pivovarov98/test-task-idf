@@ -40,6 +40,7 @@ public interface TransactionMapper {
     }
 
     @Mapping(target = "amountUsd", expression = "java(conversion.amountUsd())")
+    @Mapping(target = "operation", expression = "java(emptyOperation())")
     @Mapping(target = "conversionStatus", expression = "java(conversion.status())")
     @Mapping(target = "exchangeRateId", expression = "java(conversion.exchangeRateId())")
     TransactionResponse toResponse(Transaction transaction, @Context ConversionResult conversion);
@@ -48,4 +49,12 @@ public interface TransactionMapper {
     @Mapping(target = "conversionStatus", expression = "java(conversion.status())")
     @Mapping(target = "exchangeRateId", expression = "java(conversion.exchangeRateId())")
     TransactionResponse withConversion(TransactionResponse response, @Context ConversionResult conversion);
+
+    @Mapping(target = "operation", expression = "java(operation)")
+    TransactionResponse withOperation(TransactionResponse response,
+            @Context org.example.testtaskidf.dto.OperationState operation);
+
+    default org.example.testtaskidf.dto.OperationState emptyOperation() {
+        return new org.example.testtaskidf.dto.OperationState("PROCESSING", null, false, "PENDING", null, false);
+    }
 }

@@ -98,7 +98,23 @@ class TransactionApiTests {
                         .value("product"))
                 .andExpect(jsonPath("$.components.schemas.TransactionRequest.properties.datetime.format")
                         .value("date-time"))
-                .andExpect(jsonPath("$.components.schemas.TransactionResponse.properties.received_at").exists());
+                .andExpect(jsonPath("$.components.schemas.TransactionResponse.properties.received_at").exists())
+                .andExpect(jsonPath("$.components.schemas.TransactionResponse.properties.limit_exceeded").exists())
+                .andExpect(jsonPath("$.components.schemas.TransactionResponse.properties.reserved_usd").exists())
+                .andExpect(jsonPath("$.components.schemas.OperationState.properties.operation_status.enum")
+                        .value(org.hamcrest.Matchers.containsInAnyOrder(
+                                "PROCESSING", "SUCCEEDED", "FAILED", "TIMED_OUT")))
+                .andExpect(jsonPath("$.components.schemas.BankNotificationRequest.properties.status.enum")
+                        .value(org.hamcrest.Matchers.containsInAnyOrder("SUCCEEDED", "FAILED")))
+                .andExpect(jsonPath("$.components.schemas.BankStubRequest.properties.status.enum")
+                        .value(org.hamcrest.Matchers.containsInAnyOrder("PROCESSING", "SUCCEEDED", "FAILED", "ERROR")))
+                .andExpect(jsonPath("$.paths['/api/v1/bank/notifications'].post.responses['200']"
+                        + ".content['application/json'].schema['$ref']").value("#/components/schemas/OperationState"))
+                .andExpect(jsonPath("$.paths['/api/v1/bank/notifications'].post.responses['409']"
+                        + ".content['application/problem+json'].schema['$ref']")
+                        .value("#/components/schemas/ProblemDetail"))
+                .andExpect(jsonPath("$.paths['/api/v1/bank/stub/transactions/{id}'].put.responses['404']").exists())
+                .andExpect(jsonPath("$.paths['/api/v1/bank/transactions/{id}/status'].get.responses['503']").exists());
     }
 
     @Test

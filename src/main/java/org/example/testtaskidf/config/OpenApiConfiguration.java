@@ -11,7 +11,11 @@ import org.springframework.context.annotation.Configuration;
                 + "Unknown source accounts are registered automatically. Default limit: 1000 USD per category. "
                 + "Limit timestamps are assigned by the server and returned at UTC+03:00. "
                 + "Errors use RFC 9457 application/problem+json; validation errors contain errors, "
-                + "limit conflicts contain code. USD conversion uses cached OER daily values or remains PENDING. "
+                + "limit conflicts contain code. USD conversion uses cached OER daily values or the last available "
+                + "close, or remains PENDING. Rate dates use UTC; accounting months use Europe/Moscow (UTC+03:00). "
+                + "Operations reserve fixed USD amounts before bank completion. Final bank notifications retain "
+                + "or release reservations; three hours of continuous polling errors cause TIMED_OUT. "
+                + "Late success after timeout restores the original expense. The local bank stub is configurable. "
                 + "Exceeded-limit queries are not implemented."))
 public class OpenApiConfiguration {
 }

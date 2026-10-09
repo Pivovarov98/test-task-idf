@@ -33,7 +33,7 @@ class TransactionMapperTests {
                 ? ExpenseCategory.Product.class : ExpenseCategory.ServiceExpense.class);
         var response = mapper.toResponse(transaction);
         assertThat(response).usingRecursiveComparison()
-                .ignoringFields("id", "receivedAt", "amountUsd", "conversionStatus", "exchangeRateId")
+                .ignoringFields("id", "receivedAt", "amountUsd", "conversionStatus", "exchangeRateId", "operation")
                 .isEqualTo(request);
         assertThat(response.id()).isEqualTo(id);
         assertThat(response.receivedAt()).isEqualTo(receivedAt);

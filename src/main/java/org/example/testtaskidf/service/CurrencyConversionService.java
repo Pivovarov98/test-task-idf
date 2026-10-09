@@ -29,8 +29,12 @@ public class CurrencyConversionService {
             repository.complete(id, converted, null);
             return new ConversionResult(converted, "COMPLETED", null);
         }
-        var date = ExchangeRateUtils.targetDate(occurredAt, clock.instant());
+        var date = repository.conversionDate(id);
         var rate = repository.findRate(date, currency);
+        if (rate.isEmpty() && !repository.hasSnapshot(date)) {
+            repository.enqueue(date, clock.instant());
+            rate = repository.findPreviousRate(date, currency);
+        }
         if (rate.isPresent()) {
             var quote = rate.orElseThrow();
             var converted = ExchangeRateUtils.toUsd(amount, quote.unitsPerUsd());

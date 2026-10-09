@@ -20,6 +20,11 @@ import org.springframework.web.servlet.mvc.method.annotation.ResponseEntityExcep
 /** Returns ProblemDetail errors and exposes validation fields using API snake_case names. */
 @RestControllerAdvice
 public class ApiExceptionHandler extends ResponseEntityExceptionHandler {
+    @ExceptionHandler(org.springframework.web.server.ResponseStatusException.class)
+    public ProblemDetail operationFailure(org.springframework.web.server.ResponseStatusException exception) {
+        return ProblemDetail.forStatusAndDetail(exception.getStatusCode(), exception.getReason());
+    }
+
     @ExceptionHandler(LimitConflictException.class)
     public ProblemDetail limitConflict(LimitConflictException exception) {
         var problem = ProblemDetail.forStatusAndDetail(HttpStatus.CONFLICT, exception.getMessage());
