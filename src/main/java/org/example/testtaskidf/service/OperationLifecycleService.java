@@ -18,7 +18,16 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
-/** Reservations and final statuses are serialized with limit creation by account and category. */
+/**
+ * Reserves fixed USD amounts in creation order within the account/category/month in Europe/Moscow.
+ * The historical limit is resolved at creation; equality is not an exceedance. New limits do not
+ * reset occupied amounts or rewrite flags. Reservation and finalization share the PostgreSQL
+ * transaction-scoped account/category lock with limit creation. Earlier unconverted operations
+ * block later reservations in the same month.
+ *
+ * <p>Success retains the reserve as expense. Failure and timeout release it once. Late success
+ * after timeout restores the original amount in the original month without rewriting other flags.
+ */
 @Service
 public class OperationLifecycleService {
     private final OperationRepository repository;
@@ -37,6 +46,7 @@ public class OperationLifecycleService {
         this.pollInterval = pollInterval;
     }
 
+    /** Rejects nonpositive polling intervals and error timeouts at application startup. */
     @jakarta.annotation.PostConstruct
     public void validateConfiguration() {
         if (timeout.isNegative() || timeout.isZero() || pollInterval.isNegative() || pollInterval.isZero()) {
@@ -152,3 +162,4 @@ public class OperationLifecycleService {
         return repository.find(id).orElseThrow();
     }
 }
+
