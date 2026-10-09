@@ -1,5 +1,6 @@
 package org.example.testtaskidf.architecture;
 
+import com.tngtech.archunit.base.DescribedPredicate;
 import com.tngtech.archunit.core.domain.JavaClass;
 import com.tngtech.archunit.core.domain.JavaConstructor;
 import com.tngtech.archunit.core.domain.JavaField;
@@ -77,6 +78,16 @@ class ArchitectureTests {
 
     @ArchTest
     static final ArchRule STATIC_HELPERS = methods().that().arePublic().and().areStatic()
+            .and(new DescribedPredicate<JavaMethod>("are not compiler-generated enum methods") {
+                @Override
+                public boolean test(JavaMethod method) {
+                    return !method.getOwner().isEnum()
+                            || !(method.getName().equals("values") && method.getRawParameterTypes().isEmpty()
+                            || method.getName().equals("valueOf")
+                            && method.getRawParameterTypes().size() == 1
+                            && method.getRawParameterTypes().getFirst().isEquivalentTo(String.class));
+                }
+            })
             .and().areDeclaredInClassesThat()
             .doNotHaveFullyQualifiedName(TestTaskIdfApplication.class.getName())
             .should().beDeclaredInClassesThat().resideInAPackage("..util..")

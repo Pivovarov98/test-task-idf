@@ -38,16 +38,25 @@ class AccountUpgradeMigrationTests {
         }
         Flyway.configure().dataSource(dataSource).schemas(schema).defaultSchema(schema).load().migrate();
         try (Connection connection = dataSource.getConnection(); var statement = connection.createStatement();
-                var rows = statement.executeQuery("SELECT currency_shortname, sum, amount_usd, conversion_status FROM "
+                var rows = statement.executeQuery("SELECT * FROM "
                         + schema + ".transactions ORDER BY currency_shortname")) {
             assertThat(rows.next()).isTrue();
             assertThat(rows.getString("currency_shortname")).isEqualTo("KZT");
             assertThat(rows.getBigDecimal("sum")).isEqualByComparingTo("5000");
             assertThat(rows.getBigDecimal("amount_usd")).isNull();
             assertThat(rows.getString("conversion_status")).isEqualTo("PENDING");
+            assertThat(rows.getString("operation_status")).isEqualTo("PROCESSING");
+            assertThat(rows.getBoolean("limit_exceeded")).isFalse();
+            assertThat(rows.getBoolean("reservation_active")).isFalse();
+            assertThat(rows.getBigDecimal("reserved_usd")).isNull();
+            assertThat(rows.getDate("conversion_rate_date").toLocalDate())
+                    .isEqualTo(java.time.LocalDate.parse("2021-12-31"));
+            var sequence = rows.getLong("operation_sequence");
             assertThat(rows.next()).isTrue();
             assertThat(rows.getBigDecimal("amount_usd")).isEqualByComparingTo("10.50");
             assertThat(rows.getString("conversion_status")).isEqualTo("COMPLETED");
+            assertThat(rows.getLong("operation_sequence")).isNotEqualTo(sequence);
+            assertThat(rows.getString("limit_check_status")).isEqualTo("PENDING");
             assertThat(rows.next()).isFalse();
         }
     }

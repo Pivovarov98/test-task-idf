@@ -134,9 +134,9 @@ class CurrencyConversionIntegrationTests {
     }
 
     @Test
-    void staleSnapshotDoesNotReplaceMissingRequestedDateAndUnsupportedCurrencyIsDistinct() {
+    void previousSnapshotConvertsImmediatelyAndUnsupportedCurrencyIsDistinct() {
         storage.save(DATE.minusDays(1), snapshot("2026-10-06T23:59:59Z", "500"));
-        assertThat(bank.receive(request("KZT", "500")).conversionStatus()).isEqualTo("PENDING");
+        assertThat(bank.receive(request("KZT", "500")).conversionStatus()).isEqualTo("COMPLETED");
         storage.save(DATE, snapshot("2026-10-07T23:59:59Z", "500"));
         var unsupported = bank.receive(request("EUR", "10"));
         assertThat(unsupported.conversionStatus()).isEqualTo("UNSUPPORTED_CURRENCY");
